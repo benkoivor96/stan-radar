@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Svi oglasi · StanRadar</title>
+<style>
+:root{
+  --bg:#F4F6F8; --card:#FFFFFF; --ink:#0E1726; --mute:#4A5568; --soft:#718096; --line:#DDE3EA;
+  --brand:#2447D6; --brand-soft:#E6ECFF; --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Arial,Helvetica,sans-serif}
+button,input,select{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.logo{font-weight:bold;font-size:20px;letter-spacing:-.3px;white-space:nowrap}
+.logo .dot{color:var(--brand)}
+.logo .sub{font-weight:normal;color:var(--soft);font-size:15px;letter-spacing:0}
+.search{flex:1 1 220px;min-width:0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.search:focus,.row2 input:focus,.kv:focus,select:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 13px;cursor:pointer;white-space:nowrap;font-weight:bold;color:var(--ink)}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn[disabled]{opacity:.5;cursor:default}
+.fbtn{display:none}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 14px;display:grid;grid-template-columns:270px 1fr;gap:18px;align-items:start}
+aside{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;position:sticky;top:76px;max-height:calc(100vh - 92px);overflow:auto}
+aside h3{font-size:13px;font-weight:bold;color:var(--ink);margin:18px 0 8px}
+aside h3:first-child{margin-top:0}
+.row2{display:flex;gap:8px}
+.row2 input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:bold;color:var(--mute);cursor:pointer;user-select:none}
+.chip.on{background:var(--brand-soft);border-color:var(--brand-soft);color:#1A34A3}
+.chk{display:flex;gap:8px;align-items:center;padding:4px 0;font-size:14px;color:var(--mute);cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--brand)}
+select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.kv{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.reset{margin-top:18px;width:100%}
+.bar{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.count{font-weight:bold;font-size:22px;line-height:1.25;letter-spacing:-.2px}
+.count small{font-weight:normal;font-size:15px;color:var(--soft)}
+.sort{width:auto}
+.status{font-size:13px;color:var(--soft);margin-top:2px}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column}
+.card.gone{opacity:.55}
+.c-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.title{font-size:16px;font-weight:bold;line-height:1.3}
+.price{font-size:18px;font-weight:bold;white-space:nowrap}
+.meta{margin-top:3px;font-size:13px;color:var(--soft)}
+.pills{margin:8px 0 2px;font-size:13px;line-height:1.9}
+.pill{display:inline-block;padding:2px 7px;border-radius:5px;font-weight:bold;margin-right:3px}
+.p-new{background:#2447D6;color:#fff}
+.p-ter{background:#E6ECFF;color:#1A34A3}
+.p-pet{background:#E3F4EA;color:#1E6B3E}
+.p-chk{background:#FFF4D6;color:#7A5200}
+.p-gray{background:#EEF1F4;color:#3D4A5C}
+.p-bad{background:#FDE8E8;color:#9B1C1C}
+.desc{margin-top:6px;font-size:13px;line-height:1.5;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.open{margin-top:10px;font-size:14px;font-weight:bold;color:var(--brand);text-decoration:none;align-self:flex-start}
+.open:hover{text-decoration:underline}
+.more{display:block;margin:18px auto 0}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;text-align:center;color:var(--mute)}
+.msg b{display:block;color:var(--ink);margin-bottom:6px;font-size:18px}
+.msg .btn{margin-top:14px}
+.skel{height:150px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(90deg,#fff,#EEF1F4,#fff);background-size:200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+@media (max-width:820px){
+  .wrap{grid-template-columns:1fr;padding-top:12px}
+  .fbtn{display:inline-block}
+  .logo{flex-basis:100%}
+  .search{flex:1 1 0}
+  .lbl{display:none}
+  aside{display:none;position:fixed;inset:0;top:0;max-height:none;border-radius:0;z-index:20;padding-bottom:84px}
+  aside.open{display:block}
+  aside.open + .close-f{display:block;position:fixed;left:14px;right:14px;bottom:14px;z-index:21}
+  .list{grid-template-columns:1fr}
+}
+.close-f{display:none}
+.alarm{max-width:1180px;margin:12px auto 0;padding:0 14px}
+.alarm div{background:#C81E1E;color:#fff;font-weight:bold;border-radius:10px;padding:10px 14px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="logo"><span class="dot">&#9673;</span> StanRadar <span class="sub">· svi oglasi</span> <span style="font-size:11px;font-weight:bold;background:#E3F4EA;color:#1E6B3E;padding:2px 6px;border-radius:5px;vertical-align:middle">LIVE</span></div>
+  <input id="q" class="search" type="search" placeholder="Traži: kvart, ulica, opis…" autocomplete="off">
+  <button id="fbtn" class="btn fbtn">Filteri</button>
+  <button id="refresh" class="btn" title="Povuci svježe podatke iz baze">↻<span class="lbl"> Osvježi</span></button>
+</div></header>
+<div id="alarm" class="alarm" hidden></div>
+
+<div class="wrap">
+  <aside id="filters">
+    <h3>Cijena (€)</h3>
+    <div class="row2"><input id="pmin" type="number" inputmode="numeric" placeholder="od"><input id="pmax" type="number" inputmode="numeric" placeholder="do"></div>
+    <h3>Površina (m²)</h3>
+    <div class="row2"><input id="mmin" type="number" inputmode="numeric" placeholder="od"><input id="mmax" type="number" inputmode="numeric" placeholder="do"></div>
+    <h3>Sobe</h3>
+    <div class="chips" id="sobe"></div>
+    <h3>Kvart</h3>
+    <input id="kvart" class="kv" list="kvlist" placeholder="npr. Trešnjevka" autocomplete="off">
+    <datalist id="kvlist"></datalist>
+    <h3>Novo</h3>
+    <select id="novo">
+      <option value="0">Sve</option>
+      <option value="1">Zadnja 24 h</option>
+      <option value="3">Zadnja 3 dana</option>
+      <option value="7">Zadnjih 7 dana</option>
+    </select>
+    <h3>Mora imati</h3>
+    <label class="chk"><input type="checkbox" id="pets"> Ljubimci dozvoljeni</label>
+    <label class="chk"><input type="checkbox" id="terasa"> Vrt / terasa</label>
+    <label class="chk"><input type="checkbox" id="bezprov"> Bez provizije</label>
+    <label class="chk"><input type="checkbox" id="saCijenom"> Samo s cijenom</label>
+    <h3>Izvor</h3>
+    <div class="chips" id="izvori"></div>
+    <h3>Ostalo</h3>
+    <label class="chk"><input type="checkbox" id="hideSus" checked> Sakrij sumnjive</label>
+    <label class="chk"><input type="checkbox" id="hideGone" checked> Sakrij iznajmljene / nestale / neaktivne</label>
+    <button id="reset" class="btn reset">Poništi filtere</button>
+  </aside>
+  <button id="closeF" class="btn primary close-f">Prikaži rezultate</button>
+
+  <main>
+    <div class="bar">
+      <div><div class="count" id="count">Učitavam…</div><div class="status" id="status"></div></div>
+      <select id="sort" class="sort">
+        <option value="new">Najnovije</option>
+        <option value="pa">Cijena ↑</option>
+        <option value="pd">Cijena ↓</option>
+        <option value="ppm">€/m² ↑</option>
+        <option value="md">Najveći m²</option>
+      </select>
+    </div>
+    <div id="out" class="list"></div>
+    <button id="more" class="btn more" hidden>Prikaži još</button>
+  </main>
+</div>
+
+<script>
+(function(){
+// Supabase: javni (publishable) ključ. Smije čitati samo tablicu oglasi (prikazni stupci) i alarm.
+const SB_URL = "https://kmrohlnmqlobugixppxh.supabase.co";
+const SB_KEY = "sb_publishable_GhcyLgrggknetKzt3yLa3g_vYQndmU9";
+const PAGE = 1000, SHOW_STEP = 60, AUTO_MS = 2*60e3;
+const COLS = "id,n:naslov,c:cijena,m:m2,s:sobe,kvart,dio_kvarta,iz:izvor,lj:ljubimci,vt:vrt_terasa,bp:bez_provizije,st:status,nn:nije_novo,obn:obnovljeno,ob:objavljeno,pv:prvi_put_vidjen,l:link,o:napomena";
+const SOBE = ["Garsonijera","1-sobni","2-sobni","3-sobni+"];
+const IZVORI = [
+  ["njuskalo","Njuškalo"],["index","Index"],["oglasnik","Oglasnik"],
+  ["fb_grupa","FB grupe"],["fb_marketplace","Marketplace"]
+];
+const $ = id => document.getElementById(id);
+const els = {q:$("q"),pmin:$("pmin"),pmax:$("pmax"),mmin:$("mmin"),mmax:$("mmax"),kvart:$("kvart"),novo:$("novo"),
+  pets:$("pets"),terasa:$("terasa"),bezprov:$("bezprov"),saCijenom:$("saCijenom"),hideSus:$("hideSus"),hideGone:$("hideGone"),sort:$("sort")};
+
+let all = [], shown = SHOW_STEP, loading = false, loadedAt = null;
+const state = {sobe:new Set(), izvori:new Set()};
+
+/* ---------- helpers ---------- */
+const norm = s => (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d");
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+const toDate = s => { if(!s) return null; const d = new Date(String(s).replace(" ","T")); return isNaN(d) ? null : d; };
+function fmtDate(d){
+  if(!d) return "";
+  const now = new Date(), diff = (now - d)/36e5;
+  const hm = d.toLocaleTimeString("hr-HR",{hour:"2-digit",minute:"2-digit"});
+  if(diff < 24 && now.getDate()===d.getDate()) return "danas " + hm;
+  const y = new Date(now); y.setDate(now.getDate()-1);
+  if(y.toDateString()===d.toDateString()) return "jučer " + hm;
+  return d.toLocaleDateString("hr-HR",{day:"2-digit",month:"2-digit"}) + " " + hm;
+}
+function prep(r){
+  const ob = toDate(r.ob), pv = toDate(r.pv);
+  // najraniji poznati trenutak: obnova oglasa ne smije izgledati kao nov oglas
+  const dt = (ob && pv) ? (ob < pv ? ob : pv) : (ob || pv);
+  const c = num(r.c), m = num(r.m);
+  const k = [r.kvart, r.dio_kvarta].filter(Boolean).join(", ");
+  const o = (r.o || "").slice(0, 240);
+  return {
+    id:r.id, n:r.n||"Stan", c, m, s:r.s||"", k, iz:r.iz||"", lj:r.lj||"", vt:r.vt===true, bp:r.bp===true,
+    st:r.st||"Aktivan", nn:r.nn===true, obnD:toDate(r.obn), l:r.l||"", o, dt, ppm:(c&&m)?c/m:null,
+    sus:/^sumnjivo/i.test(o), hay:norm([r.n,k,o].join(" ")), kn:norm(k)
+  };
+}
+
+/* ---------- persistence (light) ---------- */
+const LS = "sr-svi-oglasi-web-filteri";
+function save(){
+  try{
+    const o = {}; for(const k in els){ const e = els[k]; o[k] = e.type==="checkbox" ? e.checked : e.value; }
+    o.sobe=[...state.sobe]; o.izvori=[...state.izvori];
+    localStorage.setItem(LS, JSON.stringify(o));
+  }catch(e){}
+}
+function restore(){
+  try{
+    const o = JSON.parse(localStorage.getItem(LS)||"null"); if(!o) return;
+    for(const k in els){ if(!(k in o)) continue; const e = els[k]; if(e.type==="checkbox") e.checked=!!o[k]; else e.value=o[k]; }
+    (o.sobe||[]).forEach(x=>state.sobe.add(x)); (o.izvori||[]).forEach(x=>state.izvori.add(x));
+  }catch(e){}
+}
+
+/* ---------- filter UI ---------- */
+function chipRow(host, items, set){
+  host.innerHTML = "";
+  items.forEach(([val,label])=>{
+    const b = document.createElement("span");
+    b.className = "chip" + (set.has(val)?" on":""); b.textContent = label;
+    b.onclick = ()=>{ set.has(val)?set.delete(val):set.add(val); b.classList.toggle("on"); apply(true); };
+    host.appendChild(b);
+  });
+}
+function buildChips(){
+  chipRow($("sobe"), SOBE.map(s=>[s, s==="3-sobni+"?"3+ sobe":s]), state.sobe);
+  chipRow($("izvori"), IZVORI, state.izvori);
+}
+function buildKvartList(){
+  const cnt = {};
+  all.forEach(r=>{ const k = (r.k.split(",")[0]||"").trim(); if(k) cnt[k]=(cnt[k]||0)+1; });
+  $("kvlist").innerHTML = Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).slice(0,150).map(k=>`<option value="${esc(k)}">`).join("");
+}
+
+/* ---------- filtering + render ---------- */
+function filtered(){
+  const q = norm(els.q.value).split(/\s+/).filter(Boolean);
+  const pmin = num(els.pmin.value), pmax = num(els.pmax.value), mmin = num(els.mmin.value), mmax = num(els.mmax.value);
+  const kv = norm(els.kvart.value.trim());
+  const days = +els.novo.value, since = days ? Date.now() - days*864e5 : 0;
+  const out = all.filter(r=>{
+    if(els.hideGone.checked && (r.st==="Iznajmljeno"||r.st==="Nestao"||r.st==="Neaktivan")) return false;
+    if(els.hideSus.checked && r.sus) return false;
+    if(els.saCijenom.checked && r.c==null) return false;
+    if(pmin!=null && (r.c==null || r.c < pmin)) return false;
+    if(pmax!=null && r.c!=null && r.c > pmax) return false;
+    if(mmin!=null && (r.m==null || r.m < mmin)) return false;
+    if(mmax!=null && r.m!=null && r.m > mmax) return false;
+    if(state.sobe.size && !state.sobe.has(r.s)) return false;
+    if(state.izvori.size && !state.izvori.has(r.iz)) return false;
+    if(kv && !r.kn.includes(kv)) return false;
+    if(since && (r.nn || !r.dt || r.dt.getTime() < since)) return false;
+    if(els.pets.checked && !(r.lj==="Da"||r.lj==="Po dogovoru")) return false;
+    if(els.terasa.checked && !r.vt) return false;
+    if(els.bezprov.checked && !r.bp) return false;
+    for(const w of q) if(!r.hay.includes(w)) return false;
+    return true;
+  });
+  const s = els.sort.value, big = 1e12;
+  const by = {
+    new:(a,b)=>(b.dt?b.dt:0)-(a.dt?a.dt:0),
+    pa:(a,b)=>(a.c??big)-(b.c??big),
+    pd:(a,b)=>(b.c??-1)-(a.c??-1),
+    ppm:(a,b)=>(a.ppm??big)-(b.ppm??big),
+    md:(a,b)=>(b.m??-1)-(a.m??-1)
+  }[s];
+  return out.sort(by);
+}
+function card(r){
+  const src = IZVORI.find(x=>x[0]===r.iz) || [r.iz, r.iz];
+  const gone = r.st==="Iznajmljeno"||r.st==="Nestao"||r.st==="Neaktivan";
+  const isNew = !r.nn && r.dt && (Date.now()-r.dt.getTime()) < 864e5;
+  const isRen = !isNew && r.obnD && (Date.now()-r.obnD.getTime()) < 864e5;
+  const parts = r.k.split(",").map(x=>x.trim()).filter(Boolean);
+  const kv1 = parts.length ? parts[parts.length-1] : "";
+  const title = [r.s || "Stan", [kv1, r.m ? Math.round(r.m)+" m²" : ""].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+  const p = [];
+  if(isNew) p.push(`<span class="pill p-new">Novo</span>`);
+  if(isRen) p.push(`<span class="pill p-chk">Obnovljen</span>`);
+  if(r.vt) p.push(`<span class="pill p-ter">Terasa / vrt</span>`);
+  if(r.lj==="Da") p.push(`<span class="pill p-pet">Ljubimci OK</span>`);
+  else if(r.lj==="Po dogovoru") p.push(`<span class="pill p-chk">Ljubimci: provjeri</span>`);
+  if(r.bp) p.push(`<span class="pill p-gray">Bez provizije</span>`);
+  if(r.sus) p.push(`<span class="pill p-bad">Sumnjivo</span>`);
+  if(gone) p.push(`<span class="pill p-bad">${esc(r.st)}</span>`);
+  const price = r.c!=null ? `${Math.round(r.c).toLocaleString("hr-HR")} €` : `<span style="color:var(--soft);font-size:14px">cijena ?</span>`;
+  const meta = [r.k && r.k!==kv1 ? r.k : "", src[1], fmtDate(r.dt), r.ppm ? r.ppm.toFixed(1).replace(".",",")+" €/m²" : ""].filter(Boolean).map(esc).join(" · ");
+  const desc = r.sus ? "" : r.o;
+  const link = /^https:\/\//.test(r.l) ? r.l : "";
+  return `<article class="card${gone?" gone":""}">
+    <div class="c-top"><div class="title">${esc(title)}</div><div class="price">${price}</div></div>
+    <div class="meta">${meta}</div>
+    ${p.length?`<div class="pills">${p.join(" ")}</div>`:""}
+    ${desc?`<div class="desc">${esc(desc)}</div>`:""}
+    ${link?`<a class="open" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Otvori oglas &rarr;</a>`:""}
+  </article>`;
+}
+function apply(resetShown){
+  if(resetShown) shown = SHOW_STEP;
+  save();
+  if(!all.length) return;
+  const list = filtered();
+  $("count").innerHTML = `${list.length.toLocaleString("hr-HR")} stanova <small>od ${all.length.toLocaleString("hr-HR")}</small>`;
+  $("out").innerHTML = list.length ? list.slice(0,shown).map(card).join("")
+    : `<div class="msg" style="grid-column:1/-1"><b>Nema oglasa za ove filtere</b>Probaj proširiti cijenu ili maknuti neki uvjet.</div>`;
+  const more = $("more"); more.hidden = list.length <= shown;
+  more.textContent = `Prikaži još (${list.length-shown})`;
+}
+
+/* ---------- data from Supabase (REST) ---------- */
+const HDR = {apikey:SB_KEY, Authorization:"Bearer "+SB_KEY};
+async function sb(path, opts){
+  const res = await fetch(SB_URL + "/rest/v1/" + path, Object.assign({headers:HDR, cache:"no-store"}, opts||{}));
+  if(!res.ok) throw new Error("Supabase " + res.status + ": " + (await res.text()).slice(0,200));
+  return res.json();
+}
+function showMsg(title, text){
+  $("count").textContent = "";
+  $("out").innerHTML = `<div class="msg" style="grid-column:1/-1"><b>${esc(title)}</b>${esc(text)}<br><button class="btn primary" id="msgBtn">Pokušaj ponovno</button></div>`;
+  $("msgBtn").onclick = ()=>load();
+}
+function stamp(){
+  $("status").textContent = loadedAt ? "Ažurirano " + fmtDate(loadedAt) + " · samo se osvježava svake 2 min" : "";
+}
+
+async function loadAlarm(){
+  const box = $("alarm");
+  try{
+    const rows = await sb("rpc/stanradar_alarmi", {method:"POST", headers:Object.assign({"Content-Type":"application/json"}, HDR), body:"{}"});
+    box.innerHTML = rows.map(r=>`<div>&#9888; ${esc(r.poruka)}</div>`).join("");
+    box.hidden = !rows.length;
+  }catch(e){
+    box.innerHTML = `<div>&#9888; Alarm se ne može provjeriti (${esc(e.message)})</div>`;
+    box.hidden = false;
+  }
+}
+
+async function load(){
+  if(loading) return; loading = true;
+  const btn = $("refresh"); btn.disabled = true; btn.innerHTML = '↻<span class="lbl"> Učitavam…</span>';
+  if(!all.length) $("out").innerHTML = Array.from({length:6},()=>`<div class="skel"></div>`).join("");
+  try{
+    // čitanje redom po ID-ju (where id > zadnji), da novi redak ne može ispasti između komada
+    const rows = []; let after = null;
+    for(let p=0; p<50; p++){
+      const f = after ? "&id=gt." + encodeURIComponent(after) : "";
+      const chunk = await sb(`oglasi?select=${COLS}${f}&order=id.asc&limit=${PAGE}`);
+      rows.push(...chunk);
+      if(!all.length) $("status").textContent = `Učitano ${rows.length}…`;
+      if(chunk.length < PAGE) break;
+      after = chunk[chunk.length-1].id;
+    }
+    all = rows.map(prep);
+    loadedAt = new Date();
+    buildKvartList(); apply(false); stamp();
+  }catch(e){
+    if(all.length) $("status").textContent = "Osvježavanje nije uspjelo — prikazujem zadnje učitano (" + e.message + ")";
+    else showMsg("Učitavanje nije uspjelo", e.message);
+  }finally{
+    loading = false; btn.disabled = false; btn.innerHTML = '↻<span class="lbl"> Osvježi</span>';
+  }
+}
+function refreshAll(){ load(); loadAlarm(); }
+
+/* ---------- wire ---------- */
+restore(); buildChips();
+let t; const deb = ()=>{ clearTimeout(t); t = setTimeout(()=>apply(true), 160); };
+["q","pmin","pmax","mmin","mmax","kvart"].forEach(k=>els[k].addEventListener("input", deb));
+["novo","pets","terasa","bezprov","saCijenom","hideSus","hideGone","sort"].forEach(k=>els[k].addEventListener("change", ()=>apply(true)));
+$("more").onclick = ()=>{ shown += SHOW_STEP; apply(false); };
+$("refresh").onclick = refreshAll;
+$("reset").onclick = ()=>{
+  for(const k in els){ const e = els[k]; if(e.type==="checkbox") e.checked = (k==="hideSus"||k==="hideGone"); else if(k==="novo") e.value="0"; else if(k==="sort") e.value="new"; else e.value=""; }
+  state.sobe.clear(); state.izvori.clear(); buildChips(); apply(true);
+};
+$("fbtn").onclick = ()=>$("filters").classList.add("open");
+$("closeF").onclick = ()=>{ $("filters").classList.remove("open"); window.scrollTo(0,0); };
+refreshAll();
+setInterval(()=>{ if(!document.hidden) refreshAll(); }, AUTO_MS);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && loadedAt && Date.now()-loadedAt > AUTO_MS) refreshAll(); });
+setInterval(stamp, 30e3);
+})();
+</script>
+</body>
+</html>
