@@ -1,4 +1,4 @@
--- StanRadar · raspored (pg_cron), izvučeno iz cron.job 18.11.2026. (oglasnik-puni-* dodani 18.11. 14:20)
+-- StanRadar · raspored (pg_cron), izvučeno iz cron.job 18.11.2026. (oglasnik-puni-* i oglasnik-oznaci-nevidljive dodani 18.11.)
 -- Svi poslovi active = true. Anon JWT u naredbama zamijenjen s <ANON_KEY> (pravi ključ nije u repou).
 
 select cron.schedule('oglasnik-dohvati', '*/5 * * * *', $cmd$select public.oglasnik_dohvati(3)$cmd$);
@@ -14,6 +14,8 @@ select cron.schedule('oglasnik-puni-4', '30 3 * * *', $cmd$select public.oglasni
 select cron.schedule('oglasnik-puni-14', '31 3 * * *', $cmd$select public.oglasnik_puni(14, 23)$cmd$);
 
 select cron.schedule('oglasnik-puni-24', '32 3 * * *', $cmd$select public.oglasnik_puni(24, 30)$cmd$);
+
+select cron.schedule('oglasnik-oznaci-nevidljive', '0 4 * * *', $cmd$select public.oglasnik_oznaci_nevidljive()$cmd$);
 
 select cron.schedule('index-dohvati', '2-57/5 * * * *', $cmd$select net.http_post(
   url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
