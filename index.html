@@ -111,6 +111,12 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
       <option value="3">Zadnja 3 dana</option>
       <option value="7">Zadnjih 7 dana</option>
     </select>
+    <h3>Prikaži</h3>
+    <select id="vrsta">
+      <option value="sve">Sve</option>
+      <option value="novi">Samo novi</option>
+      <option value="obn">Samo obnovljeni</option>
+    </select>
     <h3>Mora imati</h3>
     <label class="chk"><input type="checkbox" id="pets"> Ljubimci dozvoljeni</label>
     <label class="chk"><input type="checkbox" id="terasa"> Vrt / terasa</label>
@@ -129,7 +135,8 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
     <div class="bar">
       <div><div class="count" id="count">Učitavam…</div><div class="status" id="status"></div></div>
       <select id="sort" class="sort">
-        <option value="new">Najnovije</option>
+        <option value="kao">Kao na portalu</option>
+        <option value="new">Po prvoj objavi</option>
         <option value="pa">Cijena ↑</option>
         <option value="pd">Cijena ↓</option>
         <option value="ppm">€/m² ↑</option>
@@ -147,14 +154,14 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
 const SB_URL = "https://kmrohlnmqlobugixppxh.supabase.co";
 const SB_KEY = "sb_publishable_GhcyLgrggknetKzt3yLa3g_vYQndmU9";
 const PAGE = 1000, SHOW_STEP = 60, AUTO_MS = 2*60e3;
-const COLS = "id,n:naslov,c:cijena,m:m2,s:sobe,kvart,dio_kvarta,iz:izvor,lj:ljubimci,vt:vrt_terasa,bp:bez_provizije,st:status,nn:nije_novo,obn:obnovljeno,ob:objavljeno,pv:prvi_put_vidjen,l:link,o:napomena";
+const COLS = "id,n:naslov,c:cijena,m:m2,s:sobe,kvart,dio_kvarta,iz:izvor,lj:ljubimci,vt:vrt_terasa,bp:bez_provizije,st:status,nn:nije_novo,bo:broj_obnova,obn:obnovljeno,ob:objavljeno,pv:prvi_put_vidjen,l:link,o:napomena";
 const SOBE = ["Garsonijera","1-sobni","2-sobni","3-sobni+"];
 const IZVORI = [
   ["njuskalo","Njuškalo"],["index","Index"],["oglasnik","Oglasnik"],
   ["fb_grupa","FB grupe"],["fb_marketplace","Marketplace"]
 ];
 const $ = id => document.getElementById(id);
-const els = {q:$("q"),pmin:$("pmin"),pmax:$("pmax"),mmin:$("mmin"),mmax:$("mmax"),kvart:$("kvart"),novo:$("novo"),
+const els = {q:$("q"),pmin:$("pmin"),pmax:$("pmax"),mmin:$("mmin"),mmax:$("mmax"),kvart:$("kvart"),novo:$("novo"),vrsta:$("vrsta"),
   pets:$("pets"),terasa:$("terasa"),bezprov:$("bezprov"),saCijenom:$("saCijenom"),hideSus:$("hideSus"),hideGone:$("hideGone"),sort:$("sort")};
 
 let all = [], shown = SHOW_STEP, loading = false, loadedAt = null;
@@ -183,13 +190,14 @@ function prep(r){
   const o = (r.o || "").slice(0, 240);
   return {
     id:r.id, n:r.n||"Stan", c, m, s:r.s||"", k, iz:r.iz||"", lj:r.lj||"", vt:r.vt===true, bp:r.bp===true,
-    st:r.st||"Aktivan", nn:r.nn===true, obnD:toDate(r.obn), l:r.l||"", o, dt, ppm:(c&&m)?c/m:null,
+    st:r.st||"Aktivan", nn:r.nn===true, bo:+r.bo||0, obnD:toDate(r.obn), l:r.l||"", o, dt, ppm:(c&&m)?c/m:null,
+    idn:parseInt(String(r.id).split("-").pop(),10)||0,
     sus:/^sumnjivo/i.test(o), hay:norm([r.n,k,o].join(" ")), kn:norm(k)
   };
 }
 
 /* ---------- persistence (light) ---------- */
-const LS = "sr-svi-oglasi-web-filteri";
+const LS = "sr-svi-oglasi-web-filteri-v2";
 function save(){
   try{
     const o = {}; for(const k in els){ const e = els[k]; o[k] = e.type==="checkbox" ? e.checked : e.value; }
@@ -243,6 +251,9 @@ function filtered(){
     if(state.izvori.size && !state.izvori.has(r.iz)) return false;
     if(kv && !r.kn.includes(kv)) return false;
     if(since && (r.nn || !r.dt || r.dt.getTime() < since)) return false;
+    // Novi = oglas koji je nastao nakon što smo počeli pratiti portal; Obnovljen = već smo ga imali, a portal ga je ponovno objavio
+    if(els.vrsta.value==="novi" && r.nn) return false;
+    if(els.vrsta.value==="obn" && !(r.bo>0)) return false;
     if(els.pets.checked && !(r.lj==="Da"||r.lj==="Po dogovoru")) return false;
     if(els.terasa.checked && !r.vt) return false;
     if(els.bezprov.checked && !r.bp) return false;
@@ -250,8 +261,17 @@ function filtered(){
     return true;
   });
   const s = els.sort.value, big = 1e12;
+  const t = d => d ? d.getTime() : 0;
+  const izv = r => { const i = IZVORI.findIndex(x=>x[0]===r.iz); return i<0 ? 99 : i; };
   const by = {
-    new:(a,b)=>(b.dt?b.dt:0)-(a.dt?a.dt:0),
+    // kao na portalu: zadnja objava ili obnova prva
+    kao:(a,b)=>t(b.obnD||b.dt)-t(a.obnD||a.dt),
+    // po prvoj objavi: novi po datumu objave; stari (prije praćenja) ispod, po broju oglasa koji portal dodjeljuje pri izradi
+    new:(a,b)=>{
+      if(a.nn!==b.nn) return a.nn ? 1 : -1;
+      if(!a.nn) return t(b.dt)-t(a.dt);
+      return (izv(a)-izv(b)) || (b.idn-a.idn);
+    },
     pa:(a,b)=>(a.c??big)-(b.c??big),
     pd:(a,b)=>(b.c??-1)-(a.c??-1),
     ppm:(a,b)=>(a.ppm??big)-(b.ppm??big),
@@ -263,13 +283,13 @@ function card(r){
   const src = IZVORI.find(x=>x[0]===r.iz) || [r.iz, r.iz];
   const gone = r.st==="Iznajmljeno"||r.st==="Nestao"||r.st==="Neaktivan";
   const isNew = !r.nn && r.dt && (Date.now()-r.dt.getTime()) < 864e5;
-  const isRen = !isNew && r.obnD && (Date.now()-r.obnD.getTime()) < 864e5;
+  const isRen = r.bo > 0;
   const parts = r.k.split(",").map(x=>x.trim()).filter(Boolean);
   const kv1 = parts.length ? parts[parts.length-1] : "";
   const title = [r.s || "Stan", [kv1, r.m ? Math.round(r.m)+" m²" : ""].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
   const p = [];
   if(isNew) p.push(`<span class="pill p-new">Novo</span>`);
-  if(isRen) p.push(`<span class="pill p-chk">Obnovljen</span>`);
+  if(isRen) p.push(`<span class="pill p-chk">Obnovljen${r.obnD ? " " + esc(fmtDate(r.obnD)) : ""}</span>`);
   if(r.vt) p.push(`<span class="pill p-ter">Terasa / vrt</span>`);
   if(r.lj==="Da") p.push(`<span class="pill p-pet">Ljubimci OK</span>`);
   else if(r.lj==="Po dogovoru") p.push(`<span class="pill p-chk">Ljubimci: provjeri</span>`);
@@ -359,11 +379,11 @@ function refreshAll(){ load(); loadAlarm(); }
 restore(); buildChips();
 let t; const deb = ()=>{ clearTimeout(t); t = setTimeout(()=>apply(true), 160); };
 ["q","pmin","pmax","mmin","mmax","kvart"].forEach(k=>els[k].addEventListener("input", deb));
-["novo","pets","terasa","bezprov","saCijenom","hideSus","hideGone","sort"].forEach(k=>els[k].addEventListener("change", ()=>apply(true)));
+["novo","vrsta","pets","terasa","bezprov","saCijenom","hideSus","hideGone","sort"].forEach(k=>els[k].addEventListener("change", ()=>apply(true)));
 $("more").onclick = ()=>{ shown += SHOW_STEP; apply(false); };
 $("refresh").onclick = refreshAll;
 $("reset").onclick = ()=>{
-  for(const k in els){ const e = els[k]; if(e.type==="checkbox") e.checked = (k==="hideSus"||k==="hideGone"); else if(k==="novo") e.value="0"; else if(k==="sort") e.value="new"; else e.value=""; }
+  for(const k in els){ const e = els[k]; if(e.type==="checkbox") e.checked = (k==="hideSus"||k==="hideGone"); else if(k==="novo") e.value="0"; else if(k==="vrsta") e.value="sve"; else if(k==="sort") e.value="kao"; else e.value=""; }
   state.sobe.clear(); state.izvori.clear(); buildChips(); apply(true);
 };
 $("fbtn").onclick = ()=>$("filters").classList.add("open");

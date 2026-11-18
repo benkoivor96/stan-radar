@@ -24,7 +24,7 @@ alter table public.stanovi                   enable row level security;
 create policy web_citanje_oglasa on public.oglasi as permissive for select to anon using (true);
 
 -- 3) Grantovi za anon — tablica oglasi, samo stupci (stranica Svi oglasi)
-grant select (id, izvor, link, naslov, cijena, m2, sobe, kvart, dio_kvarta, ljubimci, vrt_terasa,
+grant select (id, izvor, link, naslov, cijena, m2, sobe, kvart, dio_kvarta, ljubimci, vrt_terasa, broj_obnova,
               bez_provizije, objavljeno, obnovljeno, prvi_put_vidjen, status, napomena, nije_novo)
   on public.oglasi to anon;
 

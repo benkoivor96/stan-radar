@@ -21,6 +21,21 @@ AS $function$
   from oglas_provjere where not obradjeno and napravljeno < now() - interval '30 minutes'
   having count(*) > 0
   union all
+  -- OGLASNIK puni prolaz (stranice 4+, svake noći, od 18.11.)
+  select 'oglasnik', 'Oglasnik: noćni puni prolaz nije prošao (zadnji ' ||
+         coalesce(to_char(max(pocetak) at time zone 'Europe/Zagreb', 'DD.MM. HH24:MI'), 'nikad') || ')'
+  from scrape_runs where izvor = 'oglasnik' and uspjeh and napomena ~ '^cron str ([4-9]|[1-9][0-9])$'
+  having coalesce(max(pocetak), 'epoch') < now() - interval '26 hours'
+  union all
+  select 'oglasnik', 'Oglasnik: zadnja čitana stranica (30) nije prazna – portal ima više stranica, puni prolaz treba proširiti'
+  from scrape_runs where izvor = 'oglasnik' and uspjeh and napomena = 'cron str 30' and pocetak > now() - interval '26 hours'
+  having count(*) > 0
+  union all
+  select 'oglasnik', 'Oglasnik: ' || count(*) || ' aktivnih oglasa nema na listi portala dulje od 2 dana (baza i portal se ne slažu)'
+  from oglasi
+  where izvor = 'oglasnik' and status = 'Aktivan' and zadnji_put_vidjen < now() - interval '48 hours'
+  having count(*) > 0
+  union all
   -- INDEX
   select 'index', 'Index: nema uspješnog dohvata od ' ||
          coalesce(to_char(max(pocetak) at time zone 'Europe/Zagreb', 'DD.MM. HH24:MI'), 'nikad')
