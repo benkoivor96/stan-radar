@@ -4,6 +4,7 @@
 // 200 + status 1 = aktivan (npr. cijena iznad 1200 € – u redu, ne označava se). Ostalo = nepoznato, ne označava se.
 // Neaktivan nakon dvije uzastopne negativne provjere (u bazi, index_aktivnost_upisi).
 // probno=true: ništa ne upisuje.
+// v3 (18.11.): iz detalja se upisuje i prava prva objava (postedTime) kad je u bazi prazna (index_objava_upisi).
 const SEARCH = "https://www.index.hr/oglasi/nekretnine/najam-stanova/pretraga?searchQuery=%7B%22category%22%3A%22flats-for-rent%22%2C%22module%22%3A%22real-estate%22%7D";
 const UA = "Mozilla/5.0 (compatible; StanRadar/1.0)";
 const SB = Deno.env.get("SUPABASE_URL")!;
@@ -46,6 +47,7 @@ Deno.serve(async (req) => {
           const j = JSON.parse(t);
           const d = Array.isArray(j?.data) ? j.data[0] : j?.data;
           st = d?.status ?? j?.redirectData?.status ?? null;
+          if (!probno && d?.postedTime) await rpc("index_objava_upisi", { p_oglas_id: k.id, p_objavljeno: d.postedTime });
           if (st === 1) aktivan = true;
           else if (st === 3) { aktivan = false; razlog = "iznajmljeno"; greska = "status 3"; }
           else greska = `status ${JSON.stringify(st)}`;

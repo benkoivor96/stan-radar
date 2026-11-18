@@ -40,7 +40,8 @@ begin
       nullif(r->>'obnovljeno','')::timestamptz as obnovljeno,
       nullif(r->>'napomena','') as napomena,
       nullif(r->>'grupa','') as grupa,
-      coalesce((r->>'nije_novo')::boolean,false) as nije_novo
+      coalesce((r->>'nije_novo')::boolean,false) as nije_novo,
+      coalesce((r->>'izdvojen')::boolean,false) as izdvojen
     from jsonb_array_elements(p_rows) r
     where coalesce(r->>'izvorni_id','') ~ '^[A-Za-z0-9_-]{1,40}$'
       and coalesce(r->>'link','') ~ '^https://'
@@ -50,9 +51,9 @@ begin
     from oglasi o join src s on s.id = o.id
   ), up as (
     insert into oglasi as o (id, izvor, izvorni_id, link, naslov, cijena, m2, sobe, kvart, dio_kvarta,
-                             ljubimci, vrt_terasa, bez_provizije, objavljeno, obnovljeno, napomena, grupa, nije_novo)
+                             ljubimci, vrt_terasa, bez_provizije, objavljeno, obnovljeno, napomena, grupa, nije_novo, izdvojen)
     select id, p_izvor, izvorni_id, link, naslov, cijena, m2, sobe, kvart, dio_kvarta,
-           ljubimci, vrt_terasa, bez_provizije, objavljeno, obnovljeno, napomena, grupa, nije_novo
+           ljubimci, vrt_terasa, bez_provizije, objavljeno, obnovljeno, napomena, grupa, nije_novo, izdvojen
     from src
     on conflict (id) do update set
       zadnji_put_vidjen = now(),
@@ -71,6 +72,11 @@ begin
       broj_obnova = o.broj_obnova + case when excluded.obnovljeno > o.obnovljeno + interval '1 minute' then 1 else 0 end,
       obnovljeno = case when excluded.obnovljeno is null then o.obnovljeno when o.obnovljeno is null then excluded.obnovljeno else greatest(o.obnovljeno, excluded.obnovljeno) end,
       grupa = coalesce(o.grupa, excluded.grupa),
+      izdvojen = excluded.izdvojen,
+      -- Index sam kaže je li oglas obnovljen (renewalTime); kad ga obnovi, više nije Novo (Ivor 17.11./18.11.)
+      nije_novo = case when p_izvor = 'index' then (o.nije_novo or excluded.nije_novo) else o.nije_novo end,
+      -- prva objava: Index je izvor istine kad je lista daje; ostali portali: upiše se samo kad je bila prazna (18.11.)
+      objavljeno = case when p_izvor = 'index' then coalesce(excluded.objavljeno, o.objavljeno) else coalesce(o.objavljeno, excluded.objavljeno) end,
       status = 'Aktivan',
       razlog_neaktivnosti = null,
       neaktivan_od = null

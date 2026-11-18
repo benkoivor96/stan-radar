@@ -5,6 +5,7 @@
 // koliko je oglas star vidi se iz datuma objave.
 // Kad je u listi postedTime = renewalTime, postedTime nije prava objava (provjereno 17.11.) → objavljeno se ne upisuje.
 // v4 (18.11., Ivor): bez granice cijene (maknut priceTo=1200) – svi oglasi iz Grada Zagreba.
+// v5 (18.11.): izdvojen = Index isPromoted (izdvojeni oglasi na vrhu portala).
 const SEARCH = "https://www.index.hr/oglasi/nekretnine/najam-stanova/pretraga?searchQuery=%7B%22category%22%3A%22flats-for-rent%22%2C%22module%22%3A%22real-estate%22%7D";
 const API = (p: number) => `https://www.index.hr/oglasi/api/aditem?category=flats-for-rent&includeCountyIds=056b6c84-e6f1-433f-8bdc-9b8dbb86d6fb&module=real-estate&sortOption=4&useRelevancyScoreSort=false&itemPerPage=50&page=${p}`;
 const UA = "Mozilla/5.0 (compatible; StanRadar/1.0)";
@@ -40,6 +41,7 @@ function red(it: any) {
     obnovljeno: it.renewalTime ?? it.postedTime ?? null,
     napomena, grupa: "Index",
     nije_novo: !!it.renewalTime,
+    izdvojen: it.isPromoted === true,
   };
 }
 async function rpc(fn: string, body: unknown) {

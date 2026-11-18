@@ -25,7 +25,7 @@ select cron.schedule('index-dohvati', '2-57/5 * * * *', $cmd$select net.http_pos
 select cron.schedule('index-aktivnost', '4-59/5 * * * *', $cmd$select net.http_post(
   url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-aktivnost',
   headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
-  body := '{"n":10}'::jsonb, timeout_milliseconds := 120000)$cmd$);
+  body := '{"n":20}'::jsonb, timeout_milliseconds := 120000)$cmd$);
 
 select cron.schedule('index-puni-1', '10 3 * * *', $cmd$select net.http_post(
   url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',

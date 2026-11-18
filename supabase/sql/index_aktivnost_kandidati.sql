@@ -26,7 +26,10 @@ AS $function$
           or (o.zadnji_put_vidjen < now() - interval '26 hours'
               and (o.aktivnost_provjerena_at is null or o.aktivnost_provjerena_at < now() - interval '23 hours'))
           or (puni.od is not null and o.zadnji_put_vidjen < puni.od
-              and (o.aktivnost_provjerena_at is null or o.aktivnost_provjerena_at < puni.od)) )
+              and (o.aktivnost_provjerena_at is null or o.aktivnost_provjerena_at < puni.od))
+          -- nema datuma prve objave: detalj oglasa ga daje (18.11.), najviše jednom na sat
+          or (o.objavljeno is null
+              and (o.aktivnost_provjerena_at is null or o.aktivnost_provjerena_at < now() - interval '1 hour')) )
   order by case when z.aktivan is false then 0 else 1 end, coalesce(o.aktivnost_provjerena_at, 'epoch'), o.id
   limit greatest(1, least(p_n, 30))
 $function$

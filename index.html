@@ -136,6 +136,7 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
       <div><div class="count" id="count">Učitavam…</div><div class="status" id="status"></div></div>
       <select id="sort" class="sort">
         <option value="kao">Kao na portalu</option>
+        <option value="kaoizd">Kao na portalu, izdvojeni na vrhu</option>
         <option value="new">Po prvoj objavi</option>
         <option value="pa">Cijena ↑</option>
         <option value="pd">Cijena ↓</option>
@@ -154,7 +155,7 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
 const SB_URL = "https://kmrohlnmqlobugixppxh.supabase.co";
 const SB_KEY = "sb_publishable_GhcyLgrggknetKzt3yLa3g_vYQndmU9";
 const PAGE = 1000, SHOW_STEP = 60, AUTO_MS = 2*60e3;
-const COLS = "id,n:naslov,c:cijena,m:m2,s:sobe,kvart,dio_kvarta,iz:izvor,lj:ljubimci,vt:vrt_terasa,bp:bez_provizije,st:status,nn:nije_novo,bo:broj_obnova,obn:obnovljeno,ob:objavljeno,pv:prvi_put_vidjen,l:link,o:napomena";
+const COLS = "id,n:naslov,c:cijena,m:m2,s:sobe,kvart,dio_kvarta,iz:izvor,lj:ljubimci,vt:vrt_terasa,bp:bez_provizije,st:status,nn:nije_novo,bo:broj_obnova,izd:izdvojen,obn:obnovljeno,ob:objavljeno,pv:prvi_put_vidjen,l:link,o:napomena";
 const SOBE = ["Garsonijera","1-sobni","2-sobni","3-sobni+"];
 const IZVORI = [
   ["njuskalo","Njuškalo"],["index","Index"],["oglasnik","Oglasnik"],
@@ -190,6 +191,8 @@ function prep(r){
   const o = (r.o || "").slice(0, 240);
   return {
     id:r.id, n:r.n||"Stan", c, m, s:r.s||"", k, iz:r.iz||"", lj:r.lj||"", vt:r.vt===true, bp:r.bp===true,
+    // Obnovljen: Index sam kaže (renewalTime → nije_novo), ostali portali: obnova koju smo vidjeli (broj_obnova)
+    ren: (r.iz==="index" && r.nn===true) || (+r.bo||0) > 0, izd: r.izd===true, obD: ob,
     st:r.st||"Aktivan", nn:r.nn===true, bo:+r.bo||0, obnD:toDate(r.obn), l:r.l||"", o, dt, ppm:(c&&m)?c/m:null,
     idn:parseInt(String(r.id).split("-").pop(),10)||0,
     sus:/^sumnjivo/i.test(o), hay:norm([r.n,k,o].join(" ")), kn:norm(k)
@@ -252,8 +255,8 @@ function filtered(){
     if(kv && !r.kn.includes(kv)) return false;
     if(since && (r.nn || !r.dt || r.dt.getTime() < since)) return false;
     // Novi = oglas koji je nastao nakon što smo počeli pratiti portal; Obnovljen = već smo ga imali, a portal ga je ponovno objavio
-    if(els.vrsta.value==="novi" && r.nn) return false;
-    if(els.vrsta.value==="obn" && !(r.bo>0)) return false;
+    if(els.vrsta.value==="novi" && (r.nn || r.ren)) return false;
+    if(els.vrsta.value==="obn" && !r.ren) return false;
     if(els.pets.checked && !(r.lj==="Da"||r.lj==="Po dogovoru")) return false;
     if(els.terasa.checked && !r.vt) return false;
     if(els.bezprov.checked && !r.bp) return false;
@@ -266,6 +269,8 @@ function filtered(){
   const by = {
     // kao na portalu: zadnja objava ili obnova prva
     kao:(a,b)=>t(b.obnD||b.dt)-t(a.obnD||a.dt),
+    // kao na portalu s izdvojenima na vrhu (Index ih stavlja na vrh); unutar svake grupe po datumu
+    kaoizd:(a,b)=>(b.izd-a.izd) || (t(b.obnD||b.dt)-t(a.obnD||a.dt)),
     // po prvoj objavi: novi po datumu objave; stari (prije praćenja) ispod, po broju oglasa koji portal dodjeljuje pri izradi
     new:(a,b)=>{
       if(a.nn!==b.nn) return a.nn ? 1 : -1;
@@ -282,14 +287,15 @@ function filtered(){
 function card(r){
   const src = IZVORI.find(x=>x[0]===r.iz) || [r.iz, r.iz];
   const gone = r.st==="Iznajmljeno"||r.st==="Nestao"||r.st==="Neaktivan";
-  const isNew = !r.nn && r.dt && (Date.now()-r.dt.getTime()) < 864e5;
-  const isRen = r.bo > 0;
+  const isNew = !r.nn && !r.ren && r.dt && (Date.now()-r.dt.getTime()) < 864e5;
+  const isRen = r.ren;
   const parts = r.k.split(",").map(x=>x.trim()).filter(Boolean);
   const kv1 = parts.length ? parts[parts.length-1] : "";
   const title = [r.s || "Stan", [kv1, r.m ? Math.round(r.m)+" m²" : ""].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
   const p = [];
   if(isNew) p.push(`<span class="pill p-new">Novo</span>`);
   if(isRen) p.push(`<span class="pill p-chk">Obnovljen${r.obnD ? " " + esc(fmtDate(r.obnD)) : ""}</span>`);
+  if(r.izd) p.push(`<span class="pill p-gray">Izdvojeno</span>`);
   if(r.vt) p.push(`<span class="pill p-ter">Terasa / vrt</span>`);
   if(r.lj==="Da") p.push(`<span class="pill p-pet">Ljubimci OK</span>`);
   else if(r.lj==="Po dogovoru") p.push(`<span class="pill p-chk">Ljubimci: provjeri</span>`);
@@ -297,7 +303,9 @@ function card(r){
   if(r.sus) p.push(`<span class="pill p-bad">Sumnjivo</span>`);
   if(gone) p.push(`<span class="pill p-bad">${esc(r.st)}</span>`);
   const price = r.c!=null ? `${Math.round(r.c).toLocaleString("hr-HR")} €` : `<span style="color:var(--soft);font-size:14px">cijena ?</span>`;
-  const meta = [r.k && r.k!==kv1 ? r.k : "", src[1], fmtDate(r.dt), r.ppm ? r.ppm.toFixed(1).replace(".",",")+" €/m²" : ""].filter(Boolean).map(esc).join(" · ");
+  // Index: pravi datum prve objave (kao na Indexu); ostali: najraniji poznati datum
+  const datum = r.iz==="index" ? (r.obD ? "objavljeno " + fmtDate(r.obD) : "") : fmtDate(r.dt);
+  const meta = [r.k && r.k!==kv1 ? r.k : "", src[1], datum, r.ppm ? r.ppm.toFixed(1).replace(".",",")+" €/m²" : ""].filter(Boolean).map(esc).join(" · ");
   const desc = r.sus ? "" : r.o;
   const link = /^https:\/\//.test(r.l) ? r.l : "";
   return `<article class="card${gone?" gone":""}">
