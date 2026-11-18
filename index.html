@@ -126,7 +126,6 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
     <div class="chips" id="izvori"></div>
     <h3>Ostalo</h3>
     <label class="chk"><input type="checkbox" id="hideSus" checked> Sakrij sumnjive</label>
-    <label class="chk"><input type="checkbox" id="hideGone" checked> Sakrij iznajmljene / nestale / neaktivne</label>
     <button id="reset" class="btn reset">Poništi filtere</button>
   </aside>
   <button id="closeF" class="btn primary close-f">Prikaži rezultate</button>
@@ -163,7 +162,7 @@ const IZVORI = [
 ];
 const $ = id => document.getElementById(id);
 const els = {q:$("q"),pmin:$("pmin"),pmax:$("pmax"),mmin:$("mmin"),mmax:$("mmax"),kvart:$("kvart"),novo:$("novo"),vrsta:$("vrsta"),
-  pets:$("pets"),terasa:$("terasa"),bezprov:$("bezprov"),saCijenom:$("saCijenom"),hideSus:$("hideSus"),hideGone:$("hideGone"),sort:$("sort")};
+  pets:$("pets"),terasa:$("terasa"),bezprov:$("bezprov"),saCijenom:$("saCijenom"),hideSus:$("hideSus"),sort:$("sort")};
 
 let all = [], shown = SHOW_STEP, loading = false, loadedAt = null;
 const state = {sobe:new Set(), izvori:new Set()};
@@ -200,7 +199,7 @@ function prep(r){
 }
 
 /* ---------- persistence (light) ---------- */
-const LS = "sr-svi-oglasi-web-filteri-v2";
+const LS = "sr-svi-oglasi-web-filteri-v3";
 function save(){
   try{
     const o = {}; for(const k in els){ const e = els[k]; o[k] = e.type==="checkbox" ? e.checked : e.value; }
@@ -243,7 +242,6 @@ function filtered(){
   const kv = norm(els.kvart.value.trim());
   const days = +els.novo.value, since = days ? Date.now() - days*864e5 : 0;
   const out = all.filter(r=>{
-    if(els.hideGone.checked && (r.st==="Iznajmljeno"||r.st==="Nestao"||r.st==="Neaktivan")) return false;
     if(els.hideSus.checked && r.sus) return false;
     if(els.saCijenom.checked && r.c==null) return false;
     if(pmin!=null && (r.c==null || r.c < pmin)) return false;
@@ -365,7 +363,8 @@ async function load(){
     const rows = []; let after = null;
     for(let p=0; p<50; p++){
       const f = after ? "&id=gt." + encodeURIComponent(after) : "";
-      const chunk = await sb(`oglasi?select=${COLS}${f}&order=id.asc&limit=${PAGE}`);
+      // samo aktivni oglasi: neaktivni se ne prikazuju i ne broje (Ivor 18.11.)
+      const chunk = await sb(`oglasi?select=${COLS}${f}&status=eq.Aktivan&order=id.asc&limit=${PAGE}`);
       rows.push(...chunk);
       if(!all.length) $("status").textContent = `Učitano ${rows.length}…`;
       if(chunk.length < PAGE) break;
@@ -387,11 +386,11 @@ function refreshAll(){ load(); loadAlarm(); }
 restore(); buildChips();
 let t; const deb = ()=>{ clearTimeout(t); t = setTimeout(()=>apply(true), 160); };
 ["q","pmin","pmax","mmin","mmax","kvart"].forEach(k=>els[k].addEventListener("input", deb));
-["novo","vrsta","pets","terasa","bezprov","saCijenom","hideSus","hideGone","sort"].forEach(k=>els[k].addEventListener("change", ()=>apply(true)));
+["novo","vrsta","pets","terasa","bezprov","saCijenom","hideSus","sort"].forEach(k=>els[k].addEventListener("change", ()=>apply(true)));
 $("more").onclick = ()=>{ shown += SHOW_STEP; apply(false); };
 $("refresh").onclick = refreshAll;
 $("reset").onclick = ()=>{
-  for(const k in els){ const e = els[k]; if(e.type==="checkbox") e.checked = (k==="hideSus"||k==="hideGone"); else if(k==="novo") e.value="0"; else if(k==="vrsta") e.value="sve"; else if(k==="sort") e.value="kao"; else e.value=""; }
+  for(const k in els){ const e = els[k]; if(e.type==="checkbox") e.checked = (k==="hideSus"); else if(k==="novo") e.value="0"; else if(k==="vrsta") e.value="sve"; else if(k==="sort") e.value="kao"; else e.value=""; }
   state.sobe.clear(); state.izvori.clear(); buildChips(); apply(true);
 };
 $("fbtn").onclick = ()=>$("filters").classList.add("open");
