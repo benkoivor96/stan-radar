@@ -1,4 +1,4 @@
--- StanRadar · raspored (pg_cron), izvučeno iz cron.job 18.11.2026. (oglasnik-puni-* i oglasnik-oznaci-nevidljive dodani 18.11.)
+-- StanRadar · raspored (pg_cron), izvučeno iz cron.job 18.11.2026. (oglasnik-puni-*, *-oznaci-nevidljive i index-puni-51 dodani 18.11.)
 -- Svi poslovi active = true. Anon JWT u naredbama zamijenjen s <ANON_KEY> (pravi ključ nije u repou).
 
 select cron.schedule('oglasnik-dohvati', '*/5 * * * *', $cmd$select public.oglasnik_dohvati(3)$cmd$);
@@ -51,3 +51,10 @@ select cron.schedule('index-puni-41', '22 3 * * *', $cmd$select net.http_post(
   url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
   headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
   body := '{"od":41,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
+
+select cron.schedule('index-puni-51', '25 3 * * *', $cmd$select net.http_post(
+  url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
+  headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
+  body := '{"od":51,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
+
+select cron.schedule('index-oznaci-nevidljive', '5 4 * * *', $cmd$select public.index_oznaci_nevidljive()$cmd$);

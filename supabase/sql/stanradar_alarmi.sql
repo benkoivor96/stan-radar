@@ -54,6 +54,16 @@ AS $function$
     and (aktivnost_provjerena_at is null or aktivnost_provjerena_at < now() - interval '30 hours')
   having count(*) > 0
   union all
+  -- INDEX puni prolaz do 60 stranica i oglasi bez liste (18.11.)
+  select 'index', 'Index: zadnja čitana stranica (60) nije prazna – portal ima više stranica, puni prolaz treba proširiti'
+  from scrape_runs where izvor = 'index' and uspjeh and napomena = 'edge str 60' and pocetak > now() - interval '26 hours'
+  having count(*) > 0
+  union all
+  select 'index', 'Index: ' || count(*) || ' aktivnih oglasa nema na listi portala dulje od 2 dana (baza i portal se ne slažu)'
+  from oglasi
+  where izvor = 'index' and status = 'Aktivan' and zadnji_put_vidjen < now() - interval '48 hours'
+  having count(*) > 0
+  union all
   -- ZAKAZANI POSLOVI (oba izvora)
   select split_part(j.jobname, '-', 1), 'Zakazani posao ' || j.jobname || ' je ugašen'
   from cron.job j where (j.jobname like 'oglasnik-%' or j.jobname like 'index-%') and not j.active
