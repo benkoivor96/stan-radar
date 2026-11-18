@@ -4,24 +4,33 @@ CREATE OR REPLACE FUNCTION public.oglasnik_oznaci_nevidljive()
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
--- Pravilo (Ivor 18.11.2026.): aktivan Oglasnik oglas koji 48 h nije na listi portala = Neaktivan (razlog nepoznato).
--- Radi samo ako je puni prolaz (stranice 4+) u zadnjih 26 h prošao i nijedna njegova stranica nije pala,
--- da kvar prikupljanja ne pogasi oglase. Vrati li se oglas na listu, ingest_oglasi ga vrati u Aktivan.
+-- Pravilo (Ivor 18.11.2026.: „moraju se poklapat uvijek”): nakon punog prolaza aktivan Oglasnik oglas
+-- koji prolaz nije vidio na listi portala = Neaktivan (razlog nepoznato). Baza = portal.
+-- Zaštita: zadnji puni prolaz (stranice 4+) završio prije barem 10 min, nije stariji od 26 h, nijedna stranica nije pala,
+-- i ne gasi se više od 5 % aktivnih odjednom (inače je kvar prikupljanja, ne portal).
 declare
   r record;
   v_n int := 0;
+  v_zadnji timestamptz;
+  v_od timestamptz;
+  v_akt int;
+  v_kand int;
 begin
-  if not exists (select 1 from scrape_runs where izvor = 'oglasnik' and uspjeh
-                   and napomena ~ '^cron str ([4-9]|[1-9][0-9])$' and pocetak > now() - interval '26 hours') then
-    return 0;
-  end if;
+  select max(pocetak) into v_zadnji from scrape_runs
+   where izvor = 'oglasnik' and uspjeh and napomena ~ '^cron str ([4-9]|[1-9][0-9])$';
+  if v_zadnji is null or v_zadnji > now() - interval '10 minutes' or v_zadnji < now() - interval '26 hours' then return 0; end if;
+  select min(pocetak) into v_od from scrape_runs
+   where izvor = 'oglasnik' and uspjeh and napomena ~ '^cron str ([4-9]|[1-9][0-9])$' and pocetak > v_zadnji - interval '1 hour';
   if exists (select 1 from scrape_runs where izvor = 'oglasnik' and not uspjeh
-               and napomena ~ '^cron str ([4-9]|[1-9][0-9])$' and pocetak > now() - interval '26 hours'
+               and napomena ~ '^cron str ([4-9]|[1-9][0-9])$' and pocetak >= v_od - interval '5 minutes'
                and coalesce(greska, '') <> 'parser nije nasao oglase') then
     return 0;
   end if;
+  select count(*) into v_akt from oglasi where izvor = 'oglasnik' and status = 'Aktivan';
+  select count(*) into v_kand from oglasi where izvor = 'oglasnik' and status = 'Aktivan' and zadnji_put_vidjen < v_od - interval '5 minutes';
+  if v_kand > v_akt * 0.05 then return -v_kand; end if;
   for r in select id from oglasi
-           where izvor = 'oglasnik' and status = 'Aktivan' and zadnji_put_vidjen < now() - interval '48 hours'
+           where izvor = 'oglasnik' and status = 'Aktivan' and zadnji_put_vidjen < v_od - interval '5 minutes'
   loop
     perform oznaci_neaktivan(r.id, 'nepoznato');
     v_n := v_n + 1;
