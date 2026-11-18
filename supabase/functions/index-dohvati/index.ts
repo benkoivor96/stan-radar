@@ -6,6 +6,7 @@
 // Kad je u listi postedTime = renewalTime, postedTime nije prava objava (provjereno 17.11.) → objavljeno se ne upisuje.
 // v4 (18.11., Ivor): bez granice cijene (maknut priceTo=1200) – svi oglasi iz Grada Zagreba.
 // v5 (18.11.): izdvojen = Index isPromoted (izdvojeni oglasi na vrhu portala).
+// v6 (18.11., Ivor): upisuje se i dnevni najam (rentPriceType 2), s napomenom da je cijena po danu – baza = Index.
 const SEARCH = "https://www.index.hr/oglasi/nekretnine/najam-stanova/pretraga?searchQuery=%7B%22category%22%3A%22flats-for-rent%22%2C%22module%22%3A%22real-estate%22%7D";
 const API = (p: number) => `https://www.index.hr/oglasi/api/aditem?category=flats-for-rent&includeCountyIds=056b6c84-e6f1-433f-8bdc-9b8dbb86d6fb&module=real-estate&sortOption=4&useRelevancyScoreSort=false&itemPerPage=50&page=${p}`;
 const UA = "Mozilla/5.0 (compatible; StanRadar/1.0)";
@@ -30,6 +31,7 @@ function red(it: any) {
   else if (cijena !== null && m2 && (cijena / m2 < 6 || m2 < 20 || m2 >= 300)) {
     napomena = "Sumnjivo: cijena/m² neobična (možda soba, cijena po osobi ili greška u oglasu)";
   }
+  if (it.rentPriceType === 2) napomena = "Dnevni najam: cijena je po danu";
   const dio = it.settlementName || null, kvart = it.cityName || null;
   const objavljeno = it.postedTime && it.postedTime !== it.renewalTime ? it.postedTime : null;
   return {
@@ -83,7 +85,7 @@ Deno.serve(async (req) => {
       const j = await r.json();
       const lista: any[] = Array.isArray(j?.data) ? j.data : [];
       if (!lista.length) { rezultati.push({ str: n, kraj: true }); break; }
-      const rows = lista.filter((it) => it?.code && it.rentPriceType !== 2).map(red);
+      const rows = lista.filter((it) => it?.code).map(red);
       const res = await rpc("ingest_oglasi", { p_izvor: "index", p_rows: rows, p_napomena: `edge str ${n}` });
       rezultati.push({ str: n, primljeno: lista.length, upisano: res });
     }

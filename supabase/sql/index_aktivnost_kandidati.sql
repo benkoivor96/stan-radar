@@ -8,10 +8,10 @@ AS $function$
     select distinct on (oglas_id) oglas_id, aktivan, napravljeno
     from oglas_provjere where obradjeno and oglas_id like 'index-%'
     order by oglas_id, id desc
-  ), pr as (
+  ), pr as materialized (
     select max(pocetak) as zadnji from scrape_runs
     where izvor = 'index' and uspjeh and napomena ~ '^edge str ([3-9]|[1-9][0-9])$'
-  ), puni as (
+  ), puni as materialized (
     -- početak zadnjeg punog prolaza (stranice 3+), ako je završio prije barem 20 min i nije stariji od 26 h
     select case when pr.zadnji < now() - interval '20 minutes' and pr.zadnji > now() - interval '26 hours'
                 then (select min(s.pocetak) from scrape_runs s
@@ -30,6 +30,9 @@ AS $function$
           -- nema datuma prve objave: detalj oglasa ga daje (18.11.), najviše jednom na sat
           or (o.objavljeno is null
               and (o.aktivnost_provjerena_at is null or o.aktivnost_provjerena_at < now() - interval '1 hour')) )
-  order by case when z.aktivan is false then 0 else 1 end, coalesce(o.aktivnost_provjerena_at, 'epoch'), o.id
+  -- redoslijed: druga provjera nakon negativne, pa oglasi kojih nema na listi, pa tek oni kojima samo fali datum objave (18.11.)
+  order by case when z.aktivan is false then 0
+                when o.zadnji_put_vidjen < coalesce(puni.od, now() - interval '26 hours') then 1 else 2 end,
+           coalesce(o.aktivnost_provjerena_at, 'epoch'), o.id
   limit greatest(1, least(p_n, 30))
 $function$
