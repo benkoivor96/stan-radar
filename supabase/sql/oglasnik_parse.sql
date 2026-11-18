@@ -24,7 +24,7 @@ begin
       from regexp_matches(coalesce(v_loc,''), '\\"name\\":\\"([^"\\]+)\\"', 'g') with ordinality as t(m, ord);
     if p_samo_zagreb and not ('Grad Zagreb' = any(v_names)) then continue; end if;
     v_cijena := (regexp_match(s, '\\"price\\":\{[^}]*\\"value\\":(\d+)'))[1]::int;
-    if p_samo_zagreb and v_cijena is not null and v_cijena > 1200 then continue; end if;
+    -- (18.11.2026., Ivor) bez granice cijene: idu svi oglasi iz Zagreba
     v_m2 := nullif(replace((regexp_match(s, '\\"value\\":\\"([^"\\]{0,40})\\",\\"formattedText\\":\\"[^"]*\\",\\"slug\\":\\"re_total_area\\"'))[1], ',', '.'), '')::numeric;
     v_sobe_raw := lower((regexp_match(s, '\\"value\\":\\"([^"\\]{0,40})\\",\\"formattedText\\":\\"[^"]*\\",\\"slug\\":\\"re_flat_room_number\\"'))[1]);
     v_pets := lower((regexp_match(s, '\\"value\\":\\"([^"\\]{0,40})\\",\\"formattedText\\":\\"[^"]*\\",\\"slug\\":\\"re_pets_allowed\\"'))[1]);

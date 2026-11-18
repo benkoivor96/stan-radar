@@ -8,7 +8,16 @@ declare
   r record;
   v_req bigint;
   v_cnt int := 0;
+  v_puni timestamptz;
 begin
+  -- početak zadnjeg punog prolaza (stranice 4+), ako je završio prije barem 15 min i nije stariji od 26 h
+  select min(s.pocetak) into v_puni from scrape_runs s
+   where s.izvor = 'oglasnik' and s.uspjeh and s.napomena ~ '^cron str ([4-9]|[1-9][0-9])$'
+     and s.pocetak > (select max(pocetak) from scrape_runs where izvor = 'oglasnik' and uspjeh and napomena ~ '^cron str ([4-9]|[1-9][0-9])$') - interval '1 hour';
+  if v_puni is null or v_puni < now() - interval '26 hours'
+     or (select max(pocetak) from scrape_runs where izvor = 'oglasnik' and napomena ~ '^cron str ([4-9]|[1-9][0-9])$') > now() - interval '15 minutes' then
+    v_puni := null;
+  end if;
   if p_n < 1 or p_n > 30 then raise exception 'p_n mora biti 1-30'; end if;
   for r in
     with zadnja as (
@@ -32,6 +41,10 @@ begin
         -- redovna provjera jednom na dan
         (o.zadnji_put_vidjen < now() - interval '24 hours'
          and (o.aktivnost_provjerena_at is null or o.aktivnost_provjerena_at < now() - interval '23 hours'))
+        or
+        -- odmah nakon punog prolaza: oglas koji ga prolaz nije vidio, a nije provjeren nakon prolaza (Ivor 18.11.)
+        (v_puni is not null and o.zadnji_put_vidjen < v_puni
+         and (o.aktivnost_provjerena_at is null or o.aktivnost_provjerena_at < v_puni))
       )
     order by pr, ap, o.prvi_put_vidjen
     limit p_n
