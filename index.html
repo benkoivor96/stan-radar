@@ -398,7 +398,7 @@ function refreshAll(){ load(); loadAlarm(); }
 
 /* ---------- admin: puni prolaz po portalu (19.11.; zasad otvoreno, zaštita kasnije) ---------- */
 const ADMIN = /[?&]admin\b/.test(location.search);
-const PORTALI = [["index","Index"],["oglasnik","Oglasnik"]];
+const PORTALI = [["index","Index"],["oglasnik","Oglasnik"],["njuskalo","Njuškalo"]];
 let admTimer = null, admZadnji = {};
 const nb = n => n==null ? "?" : Number(n).toLocaleString("hr-HR");
 function admKartica(iz, ime, d){
@@ -407,7 +407,7 @@ function admKartica(iz, ime, d){
   let st = "Još nije bilo punog prolaza.";
   if(n){
     const kada = fmtDate(toDate(n.zavrseno || n.poceto || n.zatrazeno));
-    if(n.status==="ceka") st = "Čeka početak…";
+    if(n.status==="ceka") st = iz==="njuskalo" ? "Čeka radnika (Chrome s ekstenzijom StanRadar Njuškalo)…" : "Čeka početak…";
     else if(n.status==="dohvat") st = `Radi… stranica ${nb(n.stranica_gotovo)} / ${nb(n.stranica_do)} (počeo ${fmtDate(toDate(n.poceto))})`;
     else st = `Zadnji prolaz ${kada} · ${n.pokrenuo==="gumb"?"gumb":"raspored"}`;
   }
@@ -428,9 +428,18 @@ function admKartica(iz, ime, d){
     (r.razlog ? `<div class="adm-s" style="color:#9B1C1C">${esc(r.razlog)}</div>` : "") +
     (r.napomena ? `<div class="adm-s">${esc(r.napomena)}</div>` : "");
   }
+  // Njuškalo čita radnik = ekstenzija u Chromeu (19.11.): je li spojen
+  let rad = "";
+  if(iz==="njuskalo"){
+    const w = d && d.radnik, z = w && toDate(w.zadnji_puls);
+    const spojen = z && (Date.now() - z.getTime()) < 3*60e3;
+    rad = `<div class="adm-n"><span class="${spojen?"ok":"bad"}">${spojen ? "Radnik spojen" : "Radnik nije spojen"}</span>`
+      + `<span>${z ? "zadnji puls " + esc(fmtDate(z)) : "puls nikad"}</span>`
+      + (w && w.stanje ? `<span class="${/^captcha/.test(w.stanje)?"bad":""}">${esc(w.stanje)}</span>` : "") + `</div>`;
+  }
   return `<div class="adm"><div class="adm-h"><b>${esc(ime)}</b>
       <button class="btn primary" data-prolaz="${iz}" ${radi?"disabled":""}>${radi?"Radi…":"Puni prolaz"}</button></div>
-    <div class="adm-s">${esc(st)}</div>${brojke}<div class="adm-s" id="adm-msg-${iz}"></div></div>`;
+    <div class="adm-s">${esc(st)}</div>${rad}${brojke}<div class="adm-s" id="adm-msg-${iz}"></div></div>`;
 }
 async function loadAdmin(){
   if(!ADMIN) return;
@@ -458,6 +467,7 @@ async function pokreni(iz, btn){
   try{
     const r = await sb("rpc/pokreni_puni_prolaz", {method:"POST", headers:Object.assign({"Content-Type":"application/json"}, HDR), body:JSON.stringify({p_izvor:iz})});
     if(!r.ok){ const m = $("adm-msg-"+iz); if(m) m.textContent = r.poruka; btn.disabled = false; btn.textContent = "Puni prolaz"; return; }
+    if(r.poruka && r.poruka !== "prolaz pokrenut"){ setTimeout(()=>{ const m = $("adm-msg-"+iz); if(m) m.textContent = r.poruka; }, 1500); }
   }catch(e){ const m = $("adm-msg-"+iz); if(m) m.textContent = "Greška: " + e.message; btn.disabled = false; btn.textContent = "Puni prolaz"; return; }
   loadAdmin();
 }

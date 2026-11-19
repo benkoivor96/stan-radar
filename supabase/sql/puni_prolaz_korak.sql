@@ -6,7 +6,8 @@ CREATE OR REPLACE FUNCTION public.puni_prolaz_korak()
 AS $function$
 -- (19.11.2026., Ivor) Vodi naloge punog prolaza (puni_prolaz_nalozi), pg_cron svake minute. Isti put za raspored (03 i 15 h) i gumb na webu.
 -- 1) dohvat svih stranica liste portala (Index: index-dohvati po 10 stranica, jedna serija za drugom; Oglasnik: lista Grad Zagreb,
---    stranice obrađuje oglasnik_obradi kao i inače), 2) provjera potpunosti (puni_prolaz_provjera),
+--    stranice obrađuje oglasnik_obradi kao i inače; Njuškalo: čita ga radnik = ekstenzija u Chromeu, koja nalog preuzima kroz
+--    njuskalo_puls i javi kraj — baza ovdje samo čeka), 2) provjera potpunosti (puni_prolaz_provjera),
 -- 3) gašenje (razlog nepoznato), nikad ako prolaz nije potpun ili ako bi se ugasilo više od 5 % aktivnih:
 --    a) viđeno TOČNO = broj s portala (ništa nije preskočeno) → odmah se gase aktivni koje ovaj prolaz nije vidio, baza = portal
 --       (Ivor 19.11.: „ne možemo nakon prolaza imat 1142 a portal 1135”);
@@ -25,6 +26,16 @@ begin
     v_po := case n.izvor when 'index' then 50 else 100 end;
     v_max := case n.izvor when 'index' then 60 else 20 end;
 
+    -- Njuškalo: nalog preuzima radnik (njuskalo_puls); ako ga nitko ne preuzme 30 min → greška, ništa se ne gasi
+    if n.izvor = 'njuskalo' and n.status = 'ceka' then
+      if n.zatrazeno < now() - interval '30 minutes' then
+        update puni_prolaz_nalozi set status = 'greska', zavrseno = now(),
+          rezultat = jsonb_build_object('potpun', false, 'razlog', 'radnik nije preuzeo nalog u 30 min (Chrome s ekstenzijom nije otvoren)')
+         where id = n.id;
+      end if;
+      continue;
+    end if;
+
     if n.status = 'ceka' then
       continue when exists (select 1 from puni_prolaz_nalozi x where x.izvor = n.izvor and x.status = 'dohvat');
       select portal_ukupno into v_uk from scrape_runs
@@ -41,7 +52,14 @@ begin
     end if;
 
     -- 1) DOHVAT
-    if n.izvor = 'oglasnik' then
+    if n.izvor = 'njuskalo' then
+      continue when n.radnik is null;   -- radnik još čita
+      if n.radnik <> 'gotovo' then        -- captcha ili greška kod radnika: prolaz nije potpun, ništa se ne gasi
+        update puni_prolaz_nalozi set status = 'greska', zavrseno = now(),
+          rezultat = jsonb_build_object('potpun', false, 'razlog', 'radnik: ' || n.radnik) where id = n.id;
+        continue;
+      end if;
+    elsif n.izvor = 'oglasnik' then
       if n.poslano_do < n.stranica_do then
         v_reqs := '{}';
         for p in 1..n.stranica_do loop
@@ -82,8 +100,8 @@ begin
     v_st := puni_prolaz_provjera(n.izvor, v_od, now());
     if not (v_st->>'potpun')::boolean and n.ponovljeno < 2 and (v_st->>'razlog') not like 'portal ima %' then
       v_fali := (regexp_match(v_st->>'razlog', 'dohvata: (\d+)'))[1]::int;
-      update puni_prolaz_nalozi set ponovljeno = ponovljeno + 1,
-        poslano_do = case when n.izvor = 'index' then coalesce(v_fali, 1) - 1 else 0 end
+      update puni_prolaz_nalozi set ponovljeno = ponovljeno + 1, radnik = null,
+        poslano_do = case when n.izvor in ('index', 'njuskalo') then coalesce(v_fali, 1) - 1 else 0 end
        where id = n.id;
       continue;
     end if;

@@ -12,14 +12,16 @@ AS $function$
           'id', n.id, 'pokrenuo', n.pokrenuo, 'status', n.status,
           'zatrazeno', n.zatrazeno, 'poceto', n.poceto, 'zavrseno', n.zavrseno,
           'stranica_do', n.stranica_do,
-          'stranica_gotovo', case when n.izvor = 'index' then
+          'stranica_gotovo', case when n.izvor = 'njuskalo' then n.poslano_do when n.izvor = 'index' then
               greatest(0, n.poslano_do - case when n.status = 'dohvat' and cardinality(n.zahtjevi) > 0
                 and not exists (select 1 from net._http_response h where h.id = n.zahtjevi[cardinality(n.zahtjevi)])
                 then least(10, n.poslano_do) else 0 end)
             else (select count(*) from scrape_zahtjevi z where z.request_id = any(n.zahtjevi) and z.obradjeno) end,
           'rezultat', n.rezultat)
-        from puni_prolaz_nalozi n where n.izvor = i order by n.id desc limit 1)
+        from puni_prolaz_nalozi n where n.izvor = i order by n.id desc limit 1),
+      'radnik', (select jsonb_build_object('zadnji_puls', r.zadnji_puls, 'verzija', r.verzija, 'stanje', r.stanje)
+                 from radnik_puls r where r.izvor = i)
     ) x
-    from unnest(array['index', 'oglasnik']) i
+    from unnest(array['index', 'oglasnik', 'njuskalo']) i
   ) t
 $function$

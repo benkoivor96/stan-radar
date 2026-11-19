@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "StanRadar Njuškalo",
+  "version": "1.0.0",
+  "description": "Čita listu najma stanova (Grad Zagreb) na Njuškalu u tvom Chromeu i šalje je u StanRadar: novi oglasi svakih 5 min, puni prolaz po nalogu (03 i 15 h ili gumb na webu).",
+  "permissions": ["alarms", "scripting", "storage", "tabs"],
+  "host_permissions": [
+    "https://www.njuskalo.hr/*",
+    "https://njuskalo.hr/*",
+    "https://kmrohlnmqlobugixppxh.supabase.co/*",
+    "https://stan-radar.ivorbenko.workers.dev/*"
+  ],
+  "background": { "service_worker": "sw.js" },
+  "action": { "default_title": "StanRadar Njuškalo" }
+}

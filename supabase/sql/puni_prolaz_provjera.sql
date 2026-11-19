@@ -5,13 +5,13 @@ CREATE OR REPLACE FUNCTION public.puni_prolaz_provjera(p_izvor text, p_od timest
  SET search_path TO 'public'
 AS $function$
 -- (19.11.2026., Ivor) Je li puni prolaz u razdoblju p_od..p_do POTPUN. Samo tada se smiju gasiti oglasi koje prolaz nije vidio.
--- Potpun = 1) portal je javio koliko oglasa ima na listi (Index count, Oglasnik total liste Grad Zagreb),
+-- Potpun = 1) portal je javio koliko oglasa ima na listi (Index count, Oglasnik total liste Grad Zagreb, Njuškalo listingsCount),
 --          2) svaka stranica od 1 do zadnje potrebne (ukupno / oglasa po stranici) ima uspješan dohvat na kojem portal ima oglase,
 --          3) prolaz je vidio barem onoliko aktivnih oglasa koliko portal javlja (inače je nešto propušteno).
 declare
-  v_pref text := case p_izvor when 'index' then 'edge' when 'oglasnik' then 'cron' end;
-  v_po int := case p_izvor when 'index' then 50 else 100 end;      -- oglasa po stranici
-  v_max int := case p_izvor when 'index' then 60 else 20 end;      -- do koje stranice prolaz smije čitati
+  v_pref text := case p_izvor when 'index' then 'edge' when 'oglasnik' then 'cron' when 'njuskalo' then 'preglednik' end;
+  v_po int := case p_izvor when 'index' then 50 when 'njuskalo' then 25 else 100 end;      -- oglasa po stranici
+  v_max int := case p_izvor when 'index' then 60 when 'njuskalo' then 200 else 20 end;     -- do koje stranice prolaz smije čitati
   v_ukupno int; v_treba int; v_fale int[]; v_akt int; v_vidjeno int;
   v_razlog text;
 begin

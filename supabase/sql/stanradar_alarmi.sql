@@ -45,20 +45,31 @@ AS $function$
   having count(*) > 0
   union all
   -- PUNI PROLAZ (19.11.: nalozi puni_prolaz_nalozi, raspored 03 i 15 h + gumb na webu)
-  select i, initcap(i) || ': nema završenog punog prolaza od ' ||
+  select i, replace(initcap(i), 'Njuskalo', 'Njuškalo') || ': nema završenog punog prolaza od ' ||
          coalesce(to_char(max(n.zavrseno) at time zone 'Europe/Zagreb', 'DD.MM. HH24:MI'), 'nikad')
-  from unnest(array['oglasnik', 'index']) i
+  from unnest(array['oglasnik', 'index', 'njuskalo']) i
   left join puni_prolaz_nalozi n on n.izvor = i and n.status in ('gotovo', 'greska')
   group by i having coalesce(max(n.zavrseno), 'epoch') < now() - interval '14 hours'
   union all
-  select n.izvor, initcap(n.izvor) || ': zadnji puni prolaz (' || to_char(n.zavrseno at time zone 'Europe/Zagreb', 'DD.MM. HH24:MI') ||
+  select n.izvor, replace(initcap(n.izvor), 'Njuskalo', 'Njuškalo') || ': zadnji puni prolaz (' || to_char(n.zavrseno at time zone 'Europe/Zagreb', 'DD.MM. HH24:MI') ||
          ') nije potpun, neaktivni se ne označavaju (' || coalesce(n.rezultat->>'razlog', 'nepoznato') || ')'
   from (select distinct on (x.izvor) x.* from puni_prolaz_nalozi x where x.status in ('gotovo', 'greska') order by x.izvor, x.id desc) n
   where not coalesce((n.rezultat->>'potpun')::boolean, false)
   union all
-  select n.izvor, initcap(n.izvor) || ': ' || (n.rezultat->>'napomena')
+  select n.izvor, replace(initcap(n.izvor), 'Njuskalo', 'Njuškalo') || ': ' || (n.rezultat->>'napomena')
   from (select distinct on (x.izvor) x.* from puni_prolaz_nalozi x where x.status = 'gotovo' order by x.izvor, x.id desc) n
   where (n.rezultat->>'napomena') like '%5 \% aktivnih%'
+  union all
+  -- NJUŠKALO radnik (ekstenzija u Ivorovom Chromeu, 19.11.)
+  select 'njuskalo', 'Njuškalo: radnik (Chrome s ekstenzijom) nije spojen od ' ||
+         coalesce(to_char(max(zadnji_puls) at time zone 'Europe/Zagreb', 'DD.MM. HH24:MI'), 'nikad')
+  from (select zadnji_puls from radnik_puls where izvor = 'njuskalo' union all select null::timestamptz) r
+  having coalesce(max(zadnji_puls), 'epoch') < now() - interval '30 minutes'
+  union all
+  select 'njuskalo', 'Njuškalo traži captchu (' || to_char(c.pocetak at time zone 'Europe/Zagreb', 'DD.MM. HH24:MI') ||
+         ') – otvori njuskalo.hr u Chromeu i klikni'
+  from (select pocetak from scrape_runs where izvor = 'njuskalo' and greska = 'captcha' order by pocetak desc limit 1) c
+  where not exists (select 1 from scrape_runs s where s.izvor = 'njuskalo' and s.uspjeh and s.pocetak > c.pocetak)
   union all
   -- ZAKAZANI POSLOVI (oba izvora)
   select case when j.jobname like 'puni-prolaz-%' then 'oba' else split_part(j.jobname, '-', 1) end, 'Zakazani posao ' || j.jobname || ' je ugašen'

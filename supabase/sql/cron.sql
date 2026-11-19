@@ -22,4 +22,4 @@ select cron.schedule('index-aktivnost', '4-59/5 * * * *', $cmd$select net.http_p
 
 select cron.schedule('puni-prolaz-korak', '* * * * *', $cmd$select public.puni_prolaz_korak()$cmd$);
 
-select cron.schedule('puni-prolaz-raspored', '0 2,14 * * *', $cmd$insert into public.puni_prolaz_nalozi (izvor, pokrenuo) values ('index', 'raspored'), ('oglasnik', 'raspored')$cmd$);
+select cron.schedule('puni-prolaz-raspored', '0 2,14 * * *', $cmd$insert into public.puni_prolaz_nalozi (izvor, pokrenuo) values ('index', 'raspored'), ('oglasnik', 'raspored'), ('njuskalo', 'raspored')$cmd$);

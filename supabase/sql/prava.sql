@@ -63,3 +63,7 @@ revoke execute on function public.puni_prolaz_korak() from public, anon, authent
 revoke execute on function public.puni_prolaz_provjera(text, timestamptz, timestamptz) from public, anon, authenticated;
 -- 19.11.2026.: upis Njuškalo liste iz preglednika (zasad otvoreno, zaštita kasnije)
 grant execute on function public.njuskalo_upis_stranice(jsonb, text, integer, integer) to anon, authenticated;
+-- 19.11.2026.: radnik za Njuškalo (ekstenzija u Chromeu); radnik_puls RLS bez politika; zasad otvoreno, zaštita kasnije
+grant execute on function public.njuskalo_puls(text, bigint, integer, integer, text, text) to anon, authenticated;
+grant execute on function public.njuskalo_za_detalje(integer) to anon, authenticated;
+grant execute on function public.njuskalo_upis_detalja(jsonb) to anon, authenticated;

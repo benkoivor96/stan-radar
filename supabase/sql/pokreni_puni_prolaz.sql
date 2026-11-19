@@ -10,7 +10,7 @@ declare
   v_id bigint;
   v_zav timestamptz;
 begin
-  if p_izvor not in ('index', 'oglasnik') then
+  if p_izvor not in ('index', 'oglasnik', 'njuskalo') then
     return jsonb_build_object('ok', false, 'poruka', 'nepoznat portal');
   end if;
   if exists (select 1 from puni_prolaz_nalozi where izvor = p_izvor and status in ('ceka', 'dohvat')) then
@@ -23,6 +23,10 @@ begin
       ', novi se može pokrenuti od ' || to_char((v_zav + interval '15 minutes') at time zone 'Europe/Zagreb', 'HH24:MI'));
   end if;
   insert into puni_prolaz_nalozi (izvor, pokrenuo) values (p_izvor, 'gumb') returning id into v_id;
+  -- Njuškalo čita radnik (ekstenzija u Chromeu): javi ako trenutno nije spojen
+  if p_izvor = 'njuskalo' and not exists (select 1 from radnik_puls where izvor = 'njuskalo' and zadnji_puls > now() - interval '3 minutes') then
+    return jsonb_build_object('ok', true, 'nalog', v_id, 'poruka', 'nalog čeka radnika: Chrome s ekstenzijom trenutno nije spojen');
+  end if;
   return jsonb_build_object('ok', true, 'nalog', v_id, 'poruka', 'prolaz pokrenut');
 end;
 $function$
