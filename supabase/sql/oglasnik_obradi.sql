@@ -41,9 +41,12 @@ begin
     v_rows := oglasnik_parse(r.content);
     if jsonb_array_length(v_rows) = 0 then
       update scrape_zahtjevi set obradjeno = true, rezultat = jsonb_build_object('greska', 'parser nije nasao oglase') where id = z.id;
-      -- stranica bez oglasa iz Zagreba: uspjeh samo ako portal na njoj ima oglase (inače prazna/neispravna stranica)
+      -- stranica bez oglasa iz Zagreba: uspjeh ako portal na njoj ima oglase ili je stranica iza kraja liste
+      -- (19.11.: prazna stranica iza kraja = kraj liste, ne greška; inače prazna/neispravna stranica)
       insert into scrape_runs (izvor, primljeno, napomena, kraj, uspjeh, greska, portal_ukupno, na_stranici)
-      values ('oglasnik', 0, 'cron str ' || z.stranica, now(), v_na > 0, case when v_na > 0 then null else 'parser nije nasao oglase' end, v_ukupno, v_na);
+      values ('oglasnik', 0, 'cron str ' || z.stranica, now(),
+              v_na > 0 or z.stranica > ceil(v_ukupno / 100.0),
+              case when v_na > 0 or z.stranica > ceil(v_ukupno / 100.0) then null else 'parser nije nasao oglase' end, v_ukupno, v_na);
       continue;
     end if;
     select coalesce(jsonb_agg(e || jsonb_build_object(

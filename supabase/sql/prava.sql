@@ -54,3 +54,10 @@ grant all on public.v_scrape_krugovi  to anon;
 grant execute on function public.notion_pid(text)            to anon;
 grant execute on function public.stanradar_alarmi()          to anon;
 grant execute on function public.sync_notion(text, jsonb)    to anon;
+
+-- 19.11.2026.: puni prolaz (nalozi). Tablica puni_prolaz_nalozi: RLS uključen, bez politika.
+-- Web (anon) samo kroz funkcije; zasad otvoreno svima (Ivor: zaštita kasnije, opaska u Notionu).
+grant execute on function public.pokreni_puni_prolaz(text) to anon, authenticated;
+grant execute on function public.puni_prolaz_pregled() to anon, authenticated;
+revoke execute on function public.puni_prolaz_korak() from public, anon, authenticated;
+revoke execute on function public.puni_prolaz_provjera(text, timestamptz, timestamptz) from public, anon, authenticated;

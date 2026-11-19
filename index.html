@@ -82,6 +82,16 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
 .close-f{display:none}
 .alarm{max-width:1180px;margin:12px auto 0;padding:0 14px}
 .alarm div{background:#C81E1E;color:#fff;font-weight:bold;border-radius:10px;padding:10px 14px;margin-bottom:6px}
+/* admin: puni prolaz (19.11.) – vidi se samo uz ?admin u adresi */
+.admin{max-width:1180px;margin:12px auto 0;padding:0 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.adm{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.adm-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.adm-h b{font-size:16px}
+.adm-s{margin-top:6px;font-size:13px;color:var(--mute);line-height:1.5}
+.adm-n{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.adm-n span{background:#EEF1F4;border-radius:6px;padding:3px 8px;font-size:13px}
+.adm-n span.ok{background:#E3F4EA;color:#1E6B3E;font-weight:bold}
+.adm-n span.bad{background:#FDE8E8;color:#9B1C1C;font-weight:bold}
 </style>
 </head>
 <body>
@@ -92,6 +102,7 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
   <button id="refresh" class="btn" title="Povuci svježe podatke iz baze">↻<span class="lbl"> Osvježi</span></button>
 </div></header>
 <div id="alarm" class="alarm" hidden></div>
+<div id="admin" class="admin" hidden></div>
 
 <div class="wrap">
   <aside id="filters">
@@ -150,7 +161,7 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
 
 <script>
 (function(){
-// Supabase: javni (publishable) ključ. Smije čitati samo tablicu oglasi (prikazni stupci) i alarm.
+// Supabase: javni (publishable) ključ. Smije čitati samo tablicu oglasi (prikazni stupci), alarm i (admin) puni prolaz.
 const SB_URL = "https://kmrohlnmqlobugixppxh.supabase.co";
 const SB_KEY = "sb_publishable_GhcyLgrggknetKzt3yLa3g_vYQndmU9";
 const PAGE = 1000, SHOW_STEP = 60, AUTO_MS = 2*60e3;
@@ -385,6 +396,72 @@ async function load(){
 }
 function refreshAll(){ load(); loadAlarm(); }
 
+/* ---------- admin: puni prolaz po portalu (19.11.; zasad otvoreno, zaštita kasnije) ---------- */
+const ADMIN = /[?&]admin\b/.test(location.search);
+const PORTALI = [["index","Index"],["oglasnik","Oglasnik"]];
+let admTimer = null, admZadnji = {};
+const nb = n => n==null ? "?" : Number(n).toLocaleString("hr-HR");
+function admKartica(iz, ime, d){
+  const n = d && d.nalog, r = n && n.rezultat;
+  const radi = n && (n.status==="ceka" || n.status==="dohvat");
+  let st = "Još nije bilo punog prolaza.";
+  if(n){
+    const kada = fmtDate(toDate(n.zavrseno || n.poceto || n.zatrazeno));
+    if(n.status==="ceka") st = "Čeka početak…";
+    else if(n.status==="dohvat") st = `Radi… stranica ${nb(n.stranica_gotovo)} / ${nb(n.stranica_do)} (počeo ${fmtDate(toDate(n.poceto))})`;
+    else st = `Zadnji prolaz ${kada} · ${n.pokrenuo==="gumb"?"gumb":"raspored"}`;
+  }
+  let brojke = "";
+  if(r && !radi){
+    const ok = r.potpun === true;
+    const slaze = r.portal_ukupno!=null && r.vidjeno!=null && +r.vidjeno >= +r.portal_ukupno;
+    brojke = `<div class="adm-n">
+      <span class="${ok?"ok":"bad"}">${ok?"Potpun ✔":"Nije potpun"}</span>
+      <span>Portal ${nb(r.portal_ukupno)}</span>
+      <span class="${slaze?"ok":"bad"}">Viđeno ${nb(r.vidjeno)}</span>
+      <span>Baza aktivnih ${nb(r.aktivnih_sada)}</span>
+      <span>Novih ${nb(r.novih)}</span>
+      <span>Obnovljenih ${nb(r.obnovljenih)}</span>
+      <span>Promjena cijene ${nb(r.promjena_cijene)}</span>
+      <span>Ugašeno ${nb(r.ugaseno)}</span>
+    </div>` +
+    (r.razlog ? `<div class="adm-s" style="color:#9B1C1C">${esc(r.razlog)}</div>` : "") +
+    (r.napomena ? `<div class="adm-s">${esc(r.napomena)}</div>` : "");
+  }
+  return `<div class="adm"><div class="adm-h"><b>${esc(ime)}</b>
+      <button class="btn primary" data-prolaz="${iz}" ${radi?"disabled":""}>${radi?"Radi…":"Puni prolaz"}</button></div>
+    <div class="adm-s">${esc(st)}</div>${brojke}<div class="adm-s" id="adm-msg-${iz}"></div></div>`;
+}
+async function loadAdmin(){
+  if(!ADMIN) return;
+  const box = $("admin");
+  let d;
+  try{
+    d = await sb("rpc/puni_prolaz_pregled", {method:"POST", headers:Object.assign({"Content-Type":"application/json"}, HDR), body:"{}"});
+  }catch(e){ box.hidden = false; box.innerHTML = `<div class="adm">Admin: ne mogu pročitati stanje (${esc(e.message)})</div>`; return; }
+  box.hidden = false;
+  box.innerHTML = PORTALI.map(([iz,ime])=>admKartica(iz, ime, d[iz])).join("");
+  box.querySelectorAll("[data-prolaz]").forEach(b=>b.onclick = ()=>pokreni(b.dataset.prolaz, b));
+  let radi = false;
+  PORTALI.forEach(([iz])=>{
+    const n = d[iz] && d[iz].nalog; if(!n) return;
+    const r = n.status==="ceka" || n.status==="dohvat"; if(r) radi = true;
+    // prolaz upravo završio → osvježi oglase i alarme
+    if(admZadnji[iz] && admZadnji[iz].radi && !r) refreshAll();
+    admZadnji[iz] = {radi:r};
+  });
+  clearTimeout(admTimer);
+  admTimer = setTimeout(loadAdmin, radi ? 10e3 : 60e3);
+}
+async function pokreni(iz, btn){
+  btn.disabled = true; btn.textContent = "Pokrećem…";
+  try{
+    const r = await sb("rpc/pokreni_puni_prolaz", {method:"POST", headers:Object.assign({"Content-Type":"application/json"}, HDR), body:JSON.stringify({p_izvor:iz})});
+    if(!r.ok){ const m = $("adm-msg-"+iz); if(m) m.textContent = r.poruka; btn.disabled = false; btn.textContent = "Puni prolaz"; return; }
+  }catch(e){ const m = $("adm-msg-"+iz); if(m) m.textContent = "Greška: " + e.message; btn.disabled = false; btn.textContent = "Puni prolaz"; return; }
+  loadAdmin();
+}
+
 /* ---------- wire ---------- */
 restore(); buildChips();
 let t; const deb = ()=>{ clearTimeout(t); t = setTimeout(()=>apply(true), 160); };
@@ -398,7 +475,7 @@ $("reset").onclick = ()=>{
 };
 $("fbtn").onclick = ()=>$("filters").classList.add("open");
 $("closeF").onclick = ()=>{ $("filters").classList.remove("open"); window.scrollTo(0,0); };
-refreshAll();
+refreshAll(); loadAdmin();
 setInterval(()=>{ if(!document.hidden) refreshAll(); }, AUTO_MS);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && loadedAt && Date.now()-loadedAt > AUTO_MS) refreshAll(); });
 setInterval(stamp, 30e3);

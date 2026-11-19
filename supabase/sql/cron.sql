@@ -1,4 +1,5 @@
--- StanRadar · raspored (pg_cron), izvučeno iz cron.job 18.11.2026. (oglasnik-puni-*, *-oznaci-nevidljive i index-puni-51 dodani 18.11.)
+-- StanRadar · raspored (pg_cron), izvučeno iz cron.job 19.11.2026.
+-- 19.11.: noćni oglasnik-puni-*, index-puni-* i *-oznaci-nevidljive zamijenjeni nalozima punog prolaza (puni-prolaz-*), 03 i 15 h (vrijeme UTC u rasporedu).
 -- Svi poslovi active = true. Anon JWT u naredbama zamijenjen s <ANON_KEY> (pravi ključ nije u repou).
 
 select cron.schedule('oglasnik-dohvati', '*/5 * * * *', $cmd$select public.oglasnik_dohvati(3)$cmd$);
@@ -8,14 +9,6 @@ select cron.schedule('oglasnik-obradi', '1-59/5 * * * *', $cmd$select public.ogl
 select cron.schedule('oglasnik-aktivnost-dohvati', '3-58/5 * * * *', $cmd$select public.oglasnik_aktivnost_dohvati(10)$cmd$);
 
 select cron.schedule('oglasnik-aktivnost-obradi', '4-59/5 * * * *', $cmd$select public.oglasnik_aktivnost_obradi(true)$cmd$);
-
-select cron.schedule('oglasnik-puni-4', '30 3 * * *', $cmd$select public.oglasnik_puni(4, 13)$cmd$);
-
-select cron.schedule('oglasnik-puni-14', '31 3 * * *', $cmd$select public.oglasnik_puni(14, 23)$cmd$);
-
-select cron.schedule('oglasnik-puni-24', '32 3 * * *', $cmd$select public.oglasnik_puni(24, 30)$cmd$);
-
-select cron.schedule('oglasnik-oznaci-nevidljive', '0 4 * * *', $cmd$select public.oglasnik_oznaci_nevidljive()$cmd$);
 
 select cron.schedule('index-dohvati', '2-57/5 * * * *', $cmd$select net.http_post(
   url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
@@ -27,34 +20,6 @@ select cron.schedule('index-aktivnost', '4-59/5 * * * *', $cmd$select net.http_p
   headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
   body := '{"n":20}'::jsonb, timeout_milliseconds := 120000)$cmd$);
 
-select cron.schedule('index-puni-1', '10 3 * * *', $cmd$select net.http_post(
-  url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
-  headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
-  body := '{"od":1,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
+select cron.schedule('puni-prolaz-korak', '* * * * *', $cmd$select public.puni_prolaz_korak()$cmd$);
 
-select cron.schedule('index-puni-11', '13 3 * * *', $cmd$select net.http_post(
-  url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
-  headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
-  body := '{"od":11,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
-
-select cron.schedule('index-puni-21', '16 3 * * *', $cmd$select net.http_post(
-  url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
-  headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
-  body := '{"od":21,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
-
-select cron.schedule('index-puni-31', '19 3 * * *', $cmd$select net.http_post(
-  url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
-  headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
-  body := '{"od":31,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
-
-select cron.schedule('index-puni-41', '22 3 * * *', $cmd$select net.http_post(
-  url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
-  headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
-  body := '{"od":41,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
-
-select cron.schedule('index-puni-51', '25 3 * * *', $cmd$select net.http_post(
-  url := 'https://kmrohlnmqlobugixppxh.supabase.co/functions/v1/index-dohvati',
-  headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <ANON_KEY>'),
-  body := '{"od":51,"stranice":10}'::jsonb, timeout_milliseconds := 150000)$cmd$);
-
-select cron.schedule('index-oznaci-nevidljive', '5 4 * * *', $cmd$select public.index_oznaci_nevidljive()$cmd$);
+select cron.schedule('puni-prolaz-raspored', '0 2,14 * * *', $cmd$insert into public.puni_prolaz_nalozi (izvor, pokrenuo) values ('index', 'raspored'), ('oglasnik', 'raspored')$cmd$);
