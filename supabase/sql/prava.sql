@@ -61,3 +61,5 @@ grant execute on function public.pokreni_puni_prolaz(text) to anon, authenticate
 grant execute on function public.puni_prolaz_pregled() to anon, authenticated;
 revoke execute on function public.puni_prolaz_korak() from public, anon, authenticated;
 revoke execute on function public.puni_prolaz_provjera(text, timestamptz, timestamptz) from public, anon, authenticated;
+-- 19.11.2026.: upis Njuškalo liste iz preglednika (zasad otvoreno, zaštita kasnije)
+grant execute on function public.njuskalo_upis_stranice(jsonb, text, integer, integer) to anon, authenticated;
