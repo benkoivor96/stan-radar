@@ -64,6 +64,12 @@ AS $function$
   where izvor = 'index' and status = 'Aktivan' and zadnji_put_vidjen < now() - interval '48 hours'
   having count(*) > 0
   union all
+  -- PUNI PROLAZ NIJE POTPUN (19.11., nalaz 1A): tada se neaktivni ne označavaju
+  select x.izv, initcap(x.izv) || ': noćni puni prolaz nije potpun, neaktivni se ne označavaju (' || (x.s->>'razlog') || ')'
+  from (select i as izv, puni_prolaz_stanje(i) as s from unnest(array['oglasnik','index']) i) x
+  where not (x.s->>'potpun')::boolean and x.s->>'razlog' <> 'prolaz još traje'
+    and x.s->>'razlog' <> 'nema noćnog prolaza u zadnjih 26 h'
+  union all
   -- ZAKAZANI POSLOVI (oba izvora)
   select split_part(j.jobname, '-', 1), 'Zakazani posao ' || j.jobname || ' je ugašen'
   from cron.job j where (j.jobname like 'oglasnik-%' or j.jobname like 'index-%') and not j.active

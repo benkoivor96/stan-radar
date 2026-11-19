@@ -154,7 +154,7 @@ select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10
 const SB_URL = "https://kmrohlnmqlobugixppxh.supabase.co";
 const SB_KEY = "sb_publishable_GhcyLgrggknetKzt3yLa3g_vYQndmU9";
 const PAGE = 1000, SHOW_STEP = 60, AUTO_MS = 2*60e3;
-const COLS = "id,n:naslov,c:cijena,m:m2,s:sobe,kvart,dio_kvarta,iz:izvor,lj:ljubimci,vt:vrt_terasa,bp:bez_provizije,st:status,nn:nije_novo,bo:broj_obnova,izd:izdvojen,obn:obnovljeno,ob:objavljeno,pv:prvi_put_vidjen,l:link,o:napomena";
+const COLS = "id,n:naslov,c:cijena,m:m2,s:sobe,kvart,dio_kvarta,iz:izvor,lj:ljubimci,vt:vrt_terasa,bp:bez_provizije,st:status,nn:nije_novo,bo:broj_obnova,izd:izdvojen,obn:obnovljeno,ob:objavljeno,pv:prvi_put_vidjen,l:link,o:napomena,cj:cijena_jedinica";
 const SOBE = ["Garsonijera","1-sobni","2-sobni","3-sobni+"];
 const IZVORI = [
   ["njuskalo","Njuškalo"],["index","Index"],["oglasnik","Oglasnik"],
@@ -193,6 +193,8 @@ function prep(r){
     // Obnovljen: Index sam kaže (renewalTime → nije_novo), ostali portali: obnova koju smo vidjeli (broj_obnova)
     ren: (r.iz==="index" && r.nn===true) || (+r.bo||0) > 0, izd: r.izd===true, obD: ob,
     st:r.st||"Aktivan", nn:r.nn===true, bo:+r.bo||0, obnD:toDate(r.obn), l:r.l||"", o, dt, ppm:(c&&m)?c/m:null,
+    // dnevni najam (Index): cijena je po danu, ne uspoređuje se s mjesečnim cijenama (19.11.)
+    dan: r.cj==="dan",
     idn:parseInt(String(r.id).split("-").pop(),10)||0,
     sus:/^sumnjivo/i.test(o), hay:norm([r.n,k,o].join(" ")), kn:norm(k)
   };
@@ -244,6 +246,7 @@ function filtered(){
   const out = all.filter(r=>{
     if(els.hideSus.checked && r.sus) return false;
     if(els.saCijenom.checked && r.c==null) return false;
+    if((pmin!=null || pmax!=null) && r.dan) return false;
     if(pmin!=null && (r.c==null || r.c < pmin)) return false;
     if(pmax!=null && r.c!=null && r.c > pmax) return false;
     if(mmin!=null && (r.m==null || r.m < mmin)) return false;
@@ -300,7 +303,7 @@ function card(r){
   if(r.bp) p.push(`<span class="pill p-gray">Bez provizije</span>`);
   if(r.sus) p.push(`<span class="pill p-bad">Sumnjivo</span>`);
   if(gone) p.push(`<span class="pill p-bad">${esc(r.st)}</span>`);
-  const price = r.c!=null ? `${Math.round(r.c).toLocaleString("hr-HR")} €` : `<span style="color:var(--soft);font-size:14px">cijena ?</span>`;
+  const price = r.c!=null ? `${Math.round(r.c).toLocaleString("hr-HR")} €${r.dan?" / dan":""}` : `<span style="color:var(--soft);font-size:14px">cijena ?</span>`;
   // Index: pravi datum prve objave (kao na Indexu); ostali: najraniji poznati datum
   const datum = r.iz==="index" ? (r.obD ? "objavljeno " + fmtDate(r.obD) : "") : fmtDate(r.dt);
   const meta = [r.k && r.k!==kv1 ? r.k : "", src[1], datum, r.ppm ? r.ppm.toFixed(1).replace(".",",")+" €/m²" : ""].filter(Boolean).map(esc).join(" · ");

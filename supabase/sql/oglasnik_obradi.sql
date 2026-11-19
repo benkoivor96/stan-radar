@@ -11,6 +11,9 @@ declare
   v_res jsonb;
   v_out jsonb := '[]'::jsonb;
   v_prag bigint;
+  v_run bigint;
+  v_ukupno int;
+  v_na int;
 begin
   -- Pravila (Ivor 17.11.): 1) sve što vidiš, upiši. Broj oglasa se dodjeljuje pri izradi i ne mijenja se obnovom.
   -- Nepoznat oglas čiji je broj <= najvećem broju koji smo imali prije 1 dan = obnovljen stari (nije_novo, ne ide u mail).
@@ -32,18 +35,23 @@ begin
       values ('oglasnik', 0, 'cron str ' || z.stranica, now(), false, coalesce(r.error_msg, 'http ' || r.status_code));
       continue;
     end if;
+    -- (19.11.2026., Ivor 1A) što je portal javio: ukupno oglasa na listi i koliko ih je na ovoj stranici (prije filtra Zagreb)
+    v_ukupno := (regexp_match(r.content, '\\"total\\":(\d+)'))[1]::int;
+    v_na := (select count(*) from regexp_matches(r.content, '\\"sort_date\\":\d', 'g'));
     v_rows := oglasnik_parse(r.content);
     if jsonb_array_length(v_rows) = 0 then
       update scrape_zahtjevi set obradjeno = true, rezultat = jsonb_build_object('greska', 'parser nije nasao oglase') where id = z.id;
-      insert into scrape_runs (izvor, primljeno, napomena, kraj, uspjeh, greska)
-      values ('oglasnik', 0, 'cron str ' || z.stranica, now(), false, 'parser nije nasao oglase');
+      -- stranica bez oglasa iz Zagreba: uspjeh samo ako portal na njoj ima oglase (inače prazna/neispravna stranica)
+      insert into scrape_runs (izvor, primljeno, napomena, kraj, uspjeh, greska, portal_ukupno, na_stranici)
+      values ('oglasnik', 0, 'cron str ' || z.stranica, now(), v_na > 0, case when v_na > 0 then null else 'parser nije nasao oglase' end, v_ukupno, v_na);
       continue;
     end if;
     select coalesce(jsonb_agg(e || jsonb_build_object(
-             'obnovljeno', e->'objavljeno',
+             'obnovljeno', coalesce(e->'obnovljeno', e->'objavljeno'),
              'nije_novo', (e->>'izvorni_id')::bigint <= v_prag)), '[]'::jsonb)
       into v_rows from jsonb_array_elements(v_rows) e;
     v_res := ingest_oglasi('oglasnik', v_rows, 'cron str ' || z.stranica);
+    update scrape_runs set portal_ukupno = v_ukupno, na_stranici = v_na where id = (v_res->>'run')::bigint;
     update scrape_zahtjevi set obradjeno = true, rezultat = v_res where id = z.id;
     v_out := v_out || jsonb_build_array(v_res);
   end loop;

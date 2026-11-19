@@ -11,7 +11,7 @@ declare
   v_names text[]; v_parts text[]; v_kv text; v_sub text;
   v_cijena int; v_m2 numeric; v_sobe_raw text; v_sobe text; v_pets text; v_ter text;
   v_te boolean; v_bp boolean; v_lj text; v_nap text; v_active boolean; v_naslov text; v_ob timestamptz;
-  v_dio text; v_kvart text;
+  v_dio text; v_kvart text; v_sd bigint; v_obn timestamptz;
 begin
   for s in
     select x from regexp_split_to_table(p_content, '\{\\"id\\":(?=\d+,\\"title\\":\\")') as x offset 1
@@ -62,6 +62,10 @@ begin
     v_naslov := coalesce(rtrim(v_sobe, '+'), 'Stan') || ', ' || v_sub
                 || case when v_m2 is not null then ', ' || round(v_m2)::text || ' m²' else '' end;
     v_ob := timezone('Europe/Zagreb', timezone('UTC', to_timestamp(v_pub, 'DD.MM.YYYY HH24:MI:SS')));
+    -- (19.11.2026., Ivor) Oglasnik lista slaže po sort_date. Kad oglašivač oglas podigne na vrh, mijenja se samo sort_date,
+    -- publish ostaje star (npr. 6597947: publish 02.10., sort_date 19.11.). Obnova = noviji od ta dva.
+    v_sd := (regexp_match(s, '\\"sort_date\\":(\d{9,11})'))[1]::bigint;
+    v_obn := greatest(v_ob, to_timestamp(v_sd));
 
     v_out := v_out || jsonb_build_array(jsonb_build_object(
       'izvorni_id', v_id,
@@ -76,6 +80,7 @@ begin
       'vrt_terasa', v_te,
       'bez_provizije', v_bp,
       'objavljeno', v_ob,
+      'obnovljeno', v_obn,
       'napomena', v_nap,
       'grupa', 'Oglasnik',
       'aktivan', v_active

@@ -12,5 +12,6 @@ from oglasi g
 where g.prvi_put_vidjen >= :od
   and g.status = 'Aktivan'
   and not g.nije_novo
+  and g.cijena_jedinica = 'mjesec'   -- dnevni najam (cijena po danu) ne ide u mjesečni budžet (Ivor 19.11.)
   and g.cijena is not null and g.cijena <= :do
   and coalesce(g.napomena, '') not like 'Sumnjivo%';
