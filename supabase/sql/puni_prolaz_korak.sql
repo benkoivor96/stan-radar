@@ -7,8 +7,10 @@ AS $function$
 -- (19.11.2026., Ivor) Vodi naloge punog prolaza (puni_prolaz_nalozi), pg_cron svake minute. Isti put za raspored (03 i 15 h) i gumb na webu.
 -- 1) dohvat svih stranica liste portala (Index: index-dohvati po 10 stranica, jedna serija za drugom; Oglasnik: lista Grad Zagreb,
 --    stranice obrađuje oglasnik_obradi kao i inače), 2) provjera potpunosti (puni_prolaz_provjera),
--- 3) gašenje: aktivan oglas koji NI OVAJ NI PRETHODNI potpuni prolaz nije vidio = Neaktivan (razlog nepoznato);
---    nikad ako prolaz nije potpun, ako nema prethodnog potpunog prolaza u 36 h ili ako bi se ugasilo više od 5 % aktivnih,
+-- 3) gašenje (razlog nepoznato), nikad ako prolaz nije potpun ili ako bi se ugasilo više od 5 % aktivnih:
+--    a) viđeno TOČNO = broj s portala (ništa nije preskočeno) → odmah se gase aktivni koje ovaj prolaz nije vidio, baza = portal
+--       (Ivor 19.11.: „ne možemo nakon prolaza imat 1142 a portal 1135”);
+--    b) inače aktivan oglas koji NI OVAJ NI PRETHODNI potpuni prolaz nije vidio (prethodni u zadnjih 36 h),
 --    Prolaz koji nije potpun ponavlja stranice koje fale (Index od prve koja fali, Oglasnik sve) najviše 2 puta
 --    (npr. 19.11. Supabase je jednoj seriji vratio 400 „Project not specified”).
 -- 4) rezultat: portal / baza / viđeno / novi / obnovljeni / promjene / ugašeni.
@@ -91,6 +93,9 @@ begin
     select (x.rezultat->>'od')::timestamptz into v_prev from puni_prolaz_nalozi x
      where x.izvor = n.izvor and x.status = 'gotovo' and (x.rezultat->>'potpun')::boolean and x.id < n.id
      order by x.id desc limit 1;
+    if (v_st->>'potpun')::boolean and (v_st->>'vidjeno')::int = (v_st->>'portal_ukupno')::int then
+      v_prev := v_od;  -- a) brojke se točno poklapaju: gasi se sve što ovaj prolaz nije vidio
+    end if;
     if not (v_st->>'potpun')::boolean then
       v_nap := 'prolaz nije potpun – ništa se ne gasi';
     elsif v_prev is null or v_prev < now() - interval '36 hours' then
